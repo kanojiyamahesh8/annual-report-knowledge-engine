@@ -8,8 +8,27 @@
   </head>
   <body>
     <main class="container">
-      <h1>Annual Report Knowledge Engine</h1>
-      <p>Foundation ready. Document inspection and Q&amp;A will be added in later milestones.</p>
+      <header>
+        <p class="eyebrow">CENTUM ELECTRONICS · ANNUAL REPORT</p>
+        <h1>Ask the report.</h1>
+        <p class="intro">Get evidence-grounded answers from the configured report evidence, with exact excerpts and PDF page citations.</p>
+      </header>
+
+      <form id="ask-form" novalidate>
+        <label for="question">Your question</label>
+        <div class="ask-row">
+          <input id="question" name="question" type="text" maxlength="2000" placeholder="What were standalone total assets in 2026?" autocomplete="off" required>
+          <button type="submit">Ask report</button>
+        </div>
+        <p class="scope-note">Evidence scope: selected verified financial-statement and note pages from the annual report.</p>
+      </form>
+
+      <section id="result" class="result" aria-live="polite" hidden>
+        <p class="eyebrow">ANSWER</p>
+        <p id="answer"></p>
+        <div id="excerpts"></div>
+      </section>
+      <p id="error" class="error" role="alert" hidden></p>
     </main>
     <script src="/static/app.js"></script>
   </body>

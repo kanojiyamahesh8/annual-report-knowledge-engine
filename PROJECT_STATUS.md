@@ -1,10 +1,41 @@
 # Project Status
 
-## Milestone 4 - Review checkpoint
+## Milestone 5 - Application integration checkpoint
 
-Status: complete and verified; Milestone 4 commit follows.
+Status: complete and verified; committed after implementation review.
 
-Last Updated: 2026-11-14 22:42:49 IST (Asia/Kolkata)
+Last Updated: 2026-11-14 22:48:41 IST (Asia/Kolkata)
+
+### Evidence scope decision
+
+- Milestone 5 supports the checked-in `data/selected_evidence.json` corpus: 18 verified annual-report pages covering standalone/consolidated financial statements and selected validated notes.
+- The scope is configurable through `EVIDENCE_PATH`; the API does not claim coverage outside the configured evidence artifact.
+- Full-report extraction remains available in `app/extraction.py`, but a full-report artifact is not silently generated as part of application startup.
+
+### Completed
+
+- Added cached FastAPI service wiring that loads the configured evidence and BM25 index once.
+- Added `POST /api/ask` with request validation, stable answer/citation responses, and generic provider-failure handling.
+- Added API tests for successful answers, exact fallback responses, invalid questions, hidden provider failures, and homepage integration.
+- Replaced the placeholder page with an accessible Q&A interface showing answers, exact excerpts, PDF page citations, loading state and errors.
+- Added `EVIDENCE_PATH` to `.env.example`.
+
+### Files created or modified
+
+- `app/config.py`
+- `app/main.py`
+- `tests/test_api.py`
+- `templates/index.html`
+- `static/app.js`
+- `static/style.css`
+- `.env.example`
+- `PROJECT_STATUS.md`
+
+### Verified test results
+
+- `.venv\\Scripts\\python.exe -m pytest -q`: **45 passed, 6 warnings** in 12.10 seconds.
+- No paid API calls were made.
+- Milestone 5 is complete and committed after implementation review.
 
 ### Completed
 
@@ -33,8 +64,8 @@ Last Updated: 2026-11-14 22:42:49 IST (Asia/Kolkata)
 - Milestone 4 is complete and committed after review.
 
 Project: Provider-Agnostic Annual Report Knowledge Engine  
-Current milestone: Milestone 4 - Review checkpoint
-Last Updated: 2026-11-14 22:42:49 IST (Asia/Kolkata)
+Current milestone: Milestone 5 - Application integration checkpoint
+Last Updated: 2026-11-14 22:48:41 IST (Asia/Kolkata)
 
 ## Completed
 

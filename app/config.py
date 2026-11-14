@@ -17,6 +17,7 @@ class Settings:
     openai_model: str = field(default_factory=lambda: os.getenv("OPENAI_MODEL", "gpt-4o-mini"))
     gemini_model: str = field(default_factory=lambda: os.getenv("GEMINI_MODEL", "gemini-2.0-flash"))
     anthropic_model: str = field(default_factory=lambda: os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-latest"))
+    evidence_path: str = field(default_factory=lambda: os.getenv("EVIDENCE_PATH", "data/selected_evidence.json"))
 
 
 settings = Settings()
