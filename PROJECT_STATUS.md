@@ -1,0 +1,262 @@
+ # Project Status
+
+Project: Provider-Agnostic Annual Report Knowledge Engine  
+Current milestone: Milestone 2 - Extraction validation and evidence serialization  
+Last Updated: 2026-11-14 20:04:44 IST (Asia/Kolkata)
+
+## Completed
+
+- Milestone 0 — repository baseline inspected; no implementation files are present yet.
+- Added this status tracker to the project root.
+
+## Files created or modified
+
+- `PROJECT_STATUS.md` — created.
+
+## Test results
+
+- No tests run; no application or test files are present in the repository.
+
+## Unresolved issues
+
+- The provided shared ChatGPT brief could not be retrieved because browser access was unavailable and the text fetch returned a cache miss. Requirements and architecture therefore remain unverified.
+
+## Technical decisions
+
+- Do not infer or change the project architecture until the agreed brief is available.
+- Keep this file concise and update it only with verified implementation and test results.
+
+## Milestone 0 verification follow-up
+
+### Verified findings
+
+- Direct workspace verification of `.venv\Scripts\python.exe --version` failed with `Access is denied`.
+- Direct workspace verification of `.venv\Scripts\python.exe -m pip --version` failed with the same error.
+- The existing `.venv\pyvenv.cfg` still targets the inaccessible WindowsApps Python 3.13 installation.
+- PyCharm project configuration still points to the project `.venv`; therefore PyCharm is configured for the same currently failing interpreter and compatibility cannot be claimed.
+- No packages were installed in this follow-up because the project interpreter is not executable.
+- `Centum_Annual_Report.pdf` was checked in the project root and was not found. It has not been processed.
+
+### Test results
+
+- `.venv\Scripts\python.exe --version`: failed, exit code 103.
+- `.venv\Scripts\python.exe -m pip --version`: failed, exit code 103.
+- PyCharm SDK configuration inspection: passed, but it references the failing `.venv`.
+- PDF presence check: failed; `Centum_Annual_Report.pdf` is absent from the project root.
+
+### Unresolved issues
+
+- The manual VS Code report that `.venv` is working conflicts with independent execution from the Project 2 workspace. The checked `.venv` remains broken and was not recreated or deleted.
+- Required dependencies, imports, `pip check`, and `requirements.txt` remain pending until the existing `.venv` executes successfully.
+- The earlier inaccessible-interpreter issue is not marked resolved because direct verification still reproduces it.
+- The prior shared-URL issue is superseded by direct requirements supplied in ChatGPT; no URL retrieval is required.
+
+## Milestone 0 audit findings
+
+### Verified
+
+- PyCharm project configuration points to `.venv` as its Python SDK (`.idea/misc.xml` and project module configuration).
+- `.venv\pyvenv.cfg` targets Python 3.13.14 under `C:\Users\HP\AppData\Local\Microsoft\WindowsApps\...`.
+- `.venv\Scripts\python.exe` and `.venv\Scripts\pip.exe` do not execute: both fail because the configured Windows Store Python target returns `Access is denied`.
+- Project terminal commands execute successfully in PowerShell, but commands using the project's `.venv` fail as above.
+- A separate system Python 3.15.0 and pip 26.2.1 are available at `C:\Python315`, but they are not the configured project interpreter.
+- The project workspace is readable and writable by Codex; a temporary write/read probe succeeded and was removed.
+- No application modules or business logic were created.
+
+### Test results
+
+- `\.venv\Scripts\python.exe --version`: failed; inaccessible configured base interpreter.
+- `\.venv\Scripts\python.exe -m pip --version`: failed; same interpreter access error.
+- `\.venv\Scripts\pip.exe --version`: failed; exit code 103.
+- `C:\Python315\python.exe --version`: passed; Python 3.15.0.
+- `C:\Python315\python.exe -m pip --version`: passed; pip 26.2.1.
+- Workspace write/read probe: passed; temporary probe removed afterward.
+- PyMuPDF, FastAPI, openai, google-genai and anthropic were not installed or imported; no package installation was attempted. Compatibility cannot be validated in the broken project environment.
+
+### Unresolved issues
+
+- The configured `.venv` must be repaired or recreated before dependency compatibility or application tests can be run. No environment change was attempted.
+- PyCharm may not be able to run Python code using the configured SDK until the `.venv` interpreter target is fixed.
+- No dependency lockfile or requirements file is present, so intended package versions are not yet defined.
+
+## Milestone 0 / Milestone 1 transition
+
+- User-reported manual repair set `.venv\pyvenv.cfg` to Python 3.13.17 from `C:\Users\HP\AppData\Local\Programs\Python\Python313`.
+- Independent Codex execution still receives `Access is denied` when invoking `.venv\Scripts\python.exe`; Python, pip, package installation, imports, `pip check`, and runtime tests could not be executed here.
+- PyCharm configuration continues to reference the project `.venv`; the SDK path is structurally correct, but runtime compatibility could not be independently confirmed.
+- The earlier WindowsApps target is no longer present in the current `pyvenv.cfg`, but the environment is not marked fully verified because execution remains blocked.
+
+## Current milestone: Milestone 1 - Foundation and PDF inspection
+
+### Completed
+
+- Created the minimal FastAPI foundation: `/` HTML homepage and `/health` JSON endpoint.
+- Added environment-backed settings for provider and model configuration without credentials or API calls.
+- Added static HTML/CSS/JavaScript placeholders and pytest health/homepage tests.
+- Added explicitly pinned dependency manifest covering PyMuPDF, FastAPI, Uvicorn, provider SDKs, LangChain integrations, BM25, dotenv, Jinja2, httpx and pytest.
+
+### Files created or modified
+
+- `app/__init__.py`
+- `app/main.py`
+- `app/config.py`
+- `templates/index.html`
+- `static/style.css`
+- `static/app.js`
+- `.env.example`
+- `.gitignore`
+- `requirements.txt`
+- `tests/test_health.py`
+- `PROJECT_STATUS.md`
+
+### Verification results
+
+- `.venv\Scripts\python.exe --version`: blocked by `Access is denied` in this execution environment.
+- `.venv\Scripts\python.exe -m pip --version`: blocked by the same restriction.
+- Dependency installation: not executed; no successful installation is claimed.
+- Package imports, LangChain provider imports, FastAPI startup, `/health`, `/`, and `pip check`: not executed because the project interpreter could not be launched.
+- `Centum_Annual_Report.pdf`: not found in the project workspace; no PDF inspection was performed.
+
+### Technical decisions
+
+- Keep PDF extraction, chunking, retrieval and citation verification outside LangChain; LangChain is reserved for later LLM integration and prompt handling.
+- Do not create provider adapters, make paid API calls, implement RAG, or process a PDF in this milestone.
+- Preserve the user-specified Python 3.13.17 environment and do not recreate `.venv` from Codex.
+
+### Unresolved issues / next milestone
+
+- Resolve the execution-context restriction or run the provided dependency and test commands manually from the project workspace.
+- After successful environment execution, install from `requirements.txt`, run imports and `pip check`, then inspect `Centum_Annual_Report.pdf` with PyMuPDF only.
+
+## Milestone 1 PDF inspection update
+
+### Verified by Codex
+
+- PDF located at `documents/Centum_Annual_Report.pdf`.
+- File exists and is approximately 12.0 MB.
+- No PDF processing or application extraction code was added.
+
+### Not yet verified
+
+- Page count, text extractability, financial-statement locations, table structures, multi-page tables, merged cells, units, and printed-page-number differences remain uninspected.
+
+### Blocker
+
+- PyMuPDF inspection could not run: `.venv\Scripts\python.exe` remains inaccessible with `Access is denied`, and the available system Python 3.15 has no `fitz` module. No alternative PDF parser was used.
+
+### Next recommended action
+
+- From a working Project 2 terminal, run the PyMuPDF-only inspection using `documents/Centum_Annual_Report.pdf`, then record the actual output here before implementing extraction.
+
+## Milestone 1 environment clarification
+
+- Verified manually by the user in the PyCharm terminal: the configured Python 3.13.17 executable, `.venv\Scripts\python.exe`, and pip execute successfully.
+- Not verified by Codex: the same `.venv` remains inaccessible from Codex's restricted execution context with `Access is denied`.
+- Consequently, Codex has not claimed PyMuPDF inspection results; page count, text extraction, financial statement locations, table layouts, multi-page behavior, and printed-page mapping remain pending.
+
+## Milestone 1 PDF inspection results
+
+### Verified by Codex using PyMuPDF
+
+- Input: `documents/Centum_Annual_Report.pdf`.
+- Page count: 335.
+- Text extraction: all 335 pages contain non-empty extractable text; no OCR was used.
+- Standalone financial statements: PDF pages 131-135. Balance Sheet is page 131; Profit and Loss is page 132; Cash Flow spans pages 133-134; Changes in Equity is page 135.
+- Standalone notes begin at PDF page 136 and continue through the later standalone section.
+- Consolidated financial statements: PDF pages 227-232. Balance Sheet is page 227; Profit and Loss is page 228; Cash Flows span pages 229-230; Changes in Equity spans pages 231-232.
+- Consolidated notes begin at PDF page 233.
+- Core standalone tables extracted with `find_tables()` preserved row labels and year columns: page 131 produced 55 rows x 4 columns; page 132 33 x 4; page 133 50 x 3; page 134 produced 10 x 3 and 10 x 4 tables; page 135 included an 8-column equity table.
+- Units and comparative years are present in table headers. The rupee symbol is not preserved cleanly in some extracted text and appears as an encoding artifact, so original source excerpts must be retained.
+- Complex note tables require explicit handling: examples include 9-column ageing tables split across pages 161-162 and 173-174, a promoter/shareholding table split across pages 165-166, and a wide 23-column PPE table on page 155 with grouped headers.
+- `find_tables()` can preserve useful table structure but does not by itself stitch multi-page tables or fully reconstruct merged/grouped headers.
+- Printed-page mapping differs from zero-based/PDF page indexing. In the financial section, PDF page 120 carries printed page 143, PDF page 131 carries printed page 154, and PDF page 132 carries printed page 155, indicating a +23 offset there. The cover and early front matter do not use the same simple mapping.
+
+### Tests executed and results
+
+- Elevated `.venv\Scripts\python.exe --version`: passed; Python 3.13.17.
+- Elevated `.venv\Scripts\python.exe -m pip --version`: passed; pip 26.2.2.
+- PyMuPDF page/text scan: passed; 335/335 pages have text.
+- PyMuPDF section-location scan: passed; standalone and consolidated statement ranges identified above.
+- PyMuPDF targeted `find_tables()` scans: passed on representative statement and notes pages; results recorded above.
+- Temporary inspection script was removed after use; no extraction pipeline was created.
+
+### Technical decisions
+
+- Use zero-based PDF page index plus extracted printed-page label as separate citation metadata; never assume a global offset.
+- Preserve raw page text and raw table excerpts because currency glyph encoding and merged headers may not survive normalization.
+- Implement multi-page table stitching and grouped-header reconstruction explicitly in Milestone 2; do not delegate PDF parsing to LangChain.
+
+### Unresolved issues / next recommended milestone
+
+- The exact table stitching rules for all notes and consolidated tables remain to be implemented and validated against representative figures.
+- Proceed to Milestone 2: PyMuPDF extraction models for paragraphs, headings, tables, source pages, units, raw excerpts and multi-page table continuity.
+
+## Milestone 2 implementation update
+
+### Completed
+
+- Added `app/extraction.py` with explicit PyMuPDF extraction models for pages, table fragments, financial tables and extracted documents.
+- Preserved PDF page numbers, detected printed-page labels, raw page text, raw table excerpts, table headers, rows, units and source-page lists.
+- Added conservative multi-page stitching: consecutive fragments merge only when their extracted headers repeat; unrelated or nonconsecutive tables remain separate.
+- Added tests for repeated-header financial table continuation and non-merge behavior.
+
+### Files created or modified
+
+- `app/extraction.py` - created.
+- `tests/test_extraction.py` - created.
+- `PROJECT_STATUS.md` - modified.
+
+### Tests executed and results
+
+- Elevated `.venv\Scripts\python.exe -m pytest -q`: passed, 4 tests passed, 6 deprecation warnings.
+- Tests cover the existing homepage/health endpoints and the new multi-page table stitching behavior.
+- A full-document `extract_document()` smoke run was attempted against the 335-page PDF but did not return a completed summary within the execution window; it is not marked as passed.
+
+### Technical decisions
+
+- Keep extraction models independent of FastAPI and LangChain so they can be tested as pure document-processing code.
+- Retain raw excerpts alongside normalized rows to support later citation verification and audit review.
+- Use repeated-header matching plus consecutive PDF pages as the initial safe stitching rule; do not guess across missing or ambiguous headers.
+
+### Known issues / next recommended action
+
+- `extract_document()` currently scans every page with `find_tables()`, which is slow on the full report and needs performance profiling before broad batch use.
+- Units and merged/grouped headers need representative validation against the actual standalone and consolidated tables.
+- Next: add extraction validation tests against selected report pages and JSON serialization for processed evidence; do not begin retrieval yet.
+
+## Milestone 2 validation and JSON evidence
+
+### Completed
+
+- Added optional selected-page extraction to avoid requiring a full-report table scan for targeted validation.
+- Added deterministic JSON serialization for extracted pages and financial tables, including source pages, headers, rows, units and raw excerpts.
+- Generated `data/selected_evidence.json` from 17 real report pages: standalone statements (131-135), known multi-page standalone tables (161-162, 165-166, 173-174), and consolidated statements (227-232).
+- Selected-page extraction produced 23 tables and stitched multi-page tables on `[133, 134]`, `[161, 162]`, `[165, 166]`, `[173, 174]`, and `[229, 230]`.
+
+### Files created or modified
+
+- `app/extraction.py` - modified for selected pages and JSON serialization.
+- `tests/test_extraction.py` - modified with serialization coverage.
+- `data/selected_evidence.json` - generated real-document evidence artifact.
+- `PROJECT_STATUS.md` - modified.
+
+### Tests executed and results
+
+- Elevated `.venv\Scripts\python.exe -m pytest -q`: passed, 5 tests passed, 6 deprecation warnings.
+- Selected-page PyMuPDF extraction: passed; 17 pages selected, full document count retained as 335, 23 tables extracted.
+- Multi-page stitching validation: passed for the five page pairs listed above.
+- JSON reload validation: passed; artifact is valid JSON with 17 pages and 23 tables, 146,860 bytes.
+
+### Known issues / next recommended action
+
+- The generated artifact is a selected-page validation output, not yet the complete processed report JSON.
+- Table units and merged/grouped headers still require figure-level validation before retrieval is implemented.
+- Next: complete extraction validation for representative financial figures, then proceed to structure-aware chunking and BM25 retrieval.
+
+## Git checkpoint
+
+- Repository initialized locally; no remote configured and nothing will be pushed.
+- Checkpoint commit message: `checkpoint: add PyMuPDF extraction and JSON evidence`.
+- Files planned for this checkpoint: application foundation, extraction models, tests, requirements, configuration examples, selected JSON evidence, and this status file.
+- `.venv`, `.env`, caches, IDE metadata, the generated structure listing, logs and the source PDF are excluded by `.gitignore`.
+- Credential review: no API keys or credential values are present in the files planned for staging; `.env` remains ignored.
