@@ -1,8 +1,8 @@
  # Project Status
 
 Project: Provider-Agnostic Annual Report Knowledge Engine  
-Current milestone: Milestone 2 - Extraction validation and evidence serialization  
-Last Updated: 2026-11-14 20:04:44 IST (Asia/Kolkata)
+Current milestone: Milestone 2 completed - extraction validation and evidence serialization  
+Last Updated: 2026-11-14 20:40:22 IST (Asia/Kolkata)
 
 ## Completed
 
@@ -260,3 +260,113 @@ Last Updated: 2026-11-14 20:04:44 IST (Asia/Kolkata)
 - Files planned for this checkpoint: application foundation, extraction models, tests, requirements, configuration examples, selected JSON evidence, and this status file.
 - `.venv`, `.env`, caches, IDE metadata, the generated structure listing, logs and the source PDF are excluded by `.gitignore`.
 - Credential review: no API keys or credential values are present in the files planned for staging; `.env` remains ignored.
+
+## Milestone 2 representative financial-figure validation
+
+### Completed
+
+- Added direct PDF-versus-structured-extraction regression tests for standalone and consolidated statements.
+- Standalone values matched the PDF tables exactly:
+  - PDF page 131, `Total assets (1+2)`: `11,059.12`, `11,204.97`.
+  - PDF page 132, `Revenue from operations`: `9,730.56`, `7,760.93`.
+  - PDF page 133, `Cash and cash equivalents at the end of the year`: `364.97`, `486.76`.
+- Consolidated values matched the PDF tables exactly:
+  - PDF page 227, `Total assets (1+2+3)`: `13,027.12`, `12,394.46`.
+  - PDF page 228, `Revenue from operations`: `9,527.49`, `7,402.59`.
+  - PDF page 229, `Cash and cash equivalents at the end of the year`: `622.38`, `654.56`.
+
+### Files created or modified
+
+- `tests/test_financial_validation.py` - created.
+- `PROJECT_STATUS.md` - modified.
+
+### Tests executed and results
+
+- Elevated `.venv\Scripts\python.exe -m pytest -q`: passed, 7 tests passed, 6 deprecation warnings in 6.09 seconds.
+- Direct PyMuPDF table rows and structured extraction rows matched for all six representative figures above.
+
+### Known issues / next recommended action
+
+- Validation currently covers selected statement figures; notes, grouped headers, units and the full report still need broader representative checks.
+- Next: begin Milestone 3 structure-aware chunking and BM25 retrieval using the verified JSON evidence model; keep tables intact and retain evidence IDs/pages.
+
+## Milestone 2 complex-note validation and completion review
+
+### Verified complex cases
+
+- PPE grouped-header table on PDF page 155: PyMuPDF preserved the raw grouped header text and 23 extracted columns, including `Gross block` and `As at April 01, 2024`; the page unit text includes `in million`. The raw excerpt retains values such as `1,337.25`.
+- Trade-receivables ageing table on PDF pages 161-162: stitched source pages and preserved the 9-column header, year/value relationship, and `2,971.87` total for the representative row.
+- Promoter/shareholding table on PDF pages 165-166: stitched source pages and preserved the beginning/change/end share values for Apparao V Mallavarapu (`58,97,549`, `(6,66,000)`, `52,31,549`).
+- Payables ageing table on PDF pages 173-174: stitched source pages and preserved the `Total` row ending in `2,549.37`.
+- Grouped-header evidence is retained raw, but the current structured model does not yet normalize grouped PPE columns into semantic subcolumns; this remains a known limitation.
+
+### Tests executed and results
+
+- Complete pytest suite: passed, 10 tests passed, 6 deprecation warnings in 7.79 seconds.
+- Added `tests/test_complex_note_tables.py` regression coverage for grouped headers, units, year-to-value relationships and multi-page continuity.
+- Full-report `extract_document()` performance check: did not return a completed summary within the available execution window for the 335-page scan. The all-page `find_tables()` path remains a performance issue requiring profiling/optimization before full-report processing can be considered complete.
+
+### Git checkpoint verification
+
+- Local checkpoint is committed: `371c917 checkpoint: add PyMuPDF extraction and JSON evidence`.
+- Verified commit object: `371c9178ad704415621eef9075be2b33a8f40619`.
+- No remote push was performed.
+- Current post-checkpoint changes are limited to `PROJECT_STATUS.md`, `tests/test_financial_validation.py`, and `tests/test_complex_note_tables.py`; they are not committed yet.
+
+### Milestone 2 status
+
+- Milestone 2 is not complete yet. Representative complex-table validation and regression tests pass, but full-report extraction performance and semantic normalization of grouped headers remain unresolved. Do not begin Milestone 3 until those issues are addressed or explicitly accepted.
+
+## Milestone 2 issue-resolution attempt
+
+### Implemented
+
+- Added a low-cost page candidate filter before calling PyMuPDF `find_tables()`. The optimized scan reduced table-detection candidates from all 335 pages to 152 pages while retaining statement/note table keywords and financial-year/unit signals.
+- Added grouped-header normalization for obvious two-row headers. Parent and child labels are combined into semantic column names such as `Outstanding for following periods from due date of payment / Less than 6 months`; raw excerpts remain unchanged.
+- Regenerated `data/selected_evidence.json` so the artifact reflects normalized headers.
+- Added regression assertions for normalized ageing-table headers and unit/raw-excerpt retention.
+
+### Verification
+
+- Selected real-page extraction: passed; normalized headers verified for tables spanning 161-162, 165-166 and 173-174.
+- Complete pytest suite: passed, 10 tests passed, 6 deprecation warnings in 18.26 seconds.
+- Full-report performance check after optimization: still did not return a completed 335-page extraction summary within the available execution window. A 20-page candidate sample took 7.67 seconds with default/lines table detection, so the full scan is expected to remain slow.
+
+### Remaining issues / milestone decision
+
+- The candidate filter and grouped-header normalization improve the implementation, but full-report extraction performance remains unresolved and the dense PPE table on page 155 still exposes a wide raw layout rather than fully semantic subcolumns.
+- Historical checkpoint: Milestone 2 was incomplete at that point because full-report performance and PPE grouped-column semantics were still unresolved; those issues are addressed in the final resolution below.
+
+## Milestone 2 final issue resolution
+
+### Completed
+
+- Optimized full-report extraction with a candidate-page filter and isolated PyMuPDF worker processes that process page batches using one PDF handle per worker.
+- Full-report extraction now completes successfully: 335 pages, 245 extracted tables, 41 stitched multi-page tables, and 12 semantic PPE columns.
+- Final measured runtime: 25.00 seconds in the Project 2 Python 3.13.17 environment.
+- Added semantic PPE grouped-column metadata for page 155 while retaining the original 23-column raw table evidence. The normalized columns are Particulars, Freehold land, Leasehold improvements, Building, Plant and equipments, Electrical installations, Computers, Office equipments, Furniture and fixtures, Vehicles, Leasehold land, and Total.
+- Added regression coverage for PPE semantic groups, normalized ageing headers, units/raw excerpts, multi-page continuity, and representative financial values.
+- Regenerated `data/selected_evidence.json` with PPE semantic metadata: 18 selected pages, 24 tables, 165,912 bytes.
+
+### Files created or modified
+
+- `app/extraction.py` - modified for candidate filtering, process-batched scans, grouped-header normalization and PPE semantic metadata.
+- `tests/test_complex_note_tables.py` - modified with PPE semantic-column assertions.
+- `data/selected_evidence.json` - regenerated.
+- `PROJECT_STATUS.md` - modified.
+
+### Tests and benchmarks
+
+- Complete pytest suite: passed, 10 tests passed, 6 deprecation warnings in 10.58 seconds.
+- Full-report extraction: passed, completed in 25.00 seconds with exit code 0.
+- PPE page-155 semantic-header verification: passed; 12 normalized columns and three grouped sections retained.
+
+### Milestone decision
+
+- Milestone 2 is complete. Milestone 3 has not started and remains the next recommended milestone: structure-aware chunking and BM25 retrieval using the verified evidence model.
+
+## GitHub publication
+
+- Local Milestone 2 changes are prepared for commit and publication.
+- GitHub repository creation and push are pending authentication/tool availability; no remote is configured yet.
+- The source PDF, `.env`, `.venv`, caches and IDE metadata remain excluded by `.gitignore`.
