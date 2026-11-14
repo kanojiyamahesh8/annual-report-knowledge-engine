@@ -1,10 +1,10 @@
 # Project Status
 
-## Milestone 6 - Production-hardening checkpoint
+## Milestone 7 - Operational hardening checkpoint
 
-Status: complete and verified; committed after production-hardening review.
+Status: complete and verified; committed after operational-hardening review.
 
-Last Updated: 2026-11-14 23:02:42 IST (Asia/Kolkata)
+Last Updated: 2026-11-14 23:10:58 IST (Asia/Kolkata)
 
 ### Evidence scope decision
 
@@ -29,12 +29,21 @@ Last Updated: 2026-11-14 23:02:42 IST (Asia/Kolkata)
 - Added resilience tests for full-report readiness, missing evidence, provider initialization, provider invocation, request IDs and OpenAPI contracts.
 - Updated the UI and configuration documentation to state complete-report evidence coverage.
 
+### Milestone 7 operational hardening
+
+- Added validated provider configuration, including required credentials, positive timeouts and bounded retry counts.
+- Added JSON-formatted operational logging with request IDs, route, status and latency fields; sensitive request content is excluded.
+- Added request-ID middleware that preserves safe client IDs and replaces invalid IDs consistently across responses.
+- Added explicit provider-configuration versus unexpected initialization error classes and stable readiness/API status handling.
+- Added retry-setting, credential-validation, structured-log, request-ID and concurrent-load tests.
+- Corrected stale Milestone 5 status statements for the full-report scope and current HTTP error classifications.
+
 ### Milestone 5 review fixes
 
 - Added real API-path coverage using the checked-in evidence artifact, the real BM25 retriever and `QAService`, with only the LLM mocked.
 - Added error-path tests for missing evidence, provider initialization failure, provider invocation failure and whitespace-only questions.
 - Added server-side whitespace normalization and rejection for blank questions.
-- Classified missing evidence as HTTP 503 and provider initialization/invocation failures as HTTP 502 without exposing internal details.
+- Classified missing evidence and provider initialization as HTTP 503, provider invocation as HTTP 502, and unexpected initialization as HTTP 500 without exposing internal details.
 - Clarified the exact supported PDF page ranges in the UI, `.env.example` and this status record.
 
 ### Files created or modified
@@ -50,9 +59,9 @@ Last Updated: 2026-11-14 23:02:42 IST (Asia/Kolkata)
 
 ### Verified test results
 
-- `.venv\\Scripts\\python.exe -m pytest -q`: **53 passed, 6 warnings** in 15.67 seconds.
+- `.venv\\Scripts\\python.exe -m pytest -q`: **57 passed, 6 warnings** in 25.94 seconds.
 - No paid API calls were made.
-- Milestone 6 is complete and committed after verification.
+- Milestone 7 is complete and committed after verification.
 
 ### Completed
 
@@ -81,8 +90,8 @@ Last Updated: 2026-11-14 23:02:42 IST (Asia/Kolkata)
 - Milestone 4 is complete and committed after review.
 
 Project: Provider-Agnostic Annual Report Knowledge Engine  
-Current milestone: Milestone 6 - Production-hardening checkpoint
-Last Updated: 2026-11-14 23:02:42 IST (Asia/Kolkata)
+Current milestone: Milestone 7 - Operational hardening checkpoint
+Last Updated: 2026-11-14 23:10:58 IST (Asia/Kolkata)
 
 ## Completed
 

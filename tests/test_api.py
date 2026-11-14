@@ -1,10 +1,12 @@
 import json
+from concurrent.futures import ThreadPoolExecutor
+import logging
 from types import SimpleNamespace
 from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from app.main import app, get_qa_service, load_configured_evidence
+from app.main import JsonFormatter, app, get_qa_service, load_configured_evidence
 from app.qa import LLMInvocationError, NOT_FOUND
 
 
@@ -105,8 +107,8 @@ def test_ask_endpoint_classifies_provider_initialization_failure(monkeypatch):
     finally:
         get_qa_service.cache_clear()
 
-    assert response.status_code == 503
-    assert response.json() == {"detail": "LLM provider unavailable"}
+    assert response.status_code == 500
+    assert response.json() == {"detail": "Service initialization failed"}
 
 
 def test_ask_endpoint_hides_provider_failures(monkeypatch):
@@ -174,6 +176,43 @@ def test_openapi_documents_typed_ask_contract():
     ask_responses = schema["paths"]["/api/ask"]["post"]["responses"]
     assert "#/components/schemas/AskResponse" in str(ask_responses["200"])
     assert "#/components/schemas/ErrorResponse" in str(ask_responses["502"])
+
+
+def test_request_id_is_preserved_and_invalid_ids_are_replaced(monkeypatch):
+    service = FakeService()
+    monkeypatch.setattr("app.main.get_qa_service", lambda: service)
+
+    response = client.post("/api/ask", headers={"X-Request-ID": "client-request-17"}, json={"question": "What were total assets?"})
+    invalid = client.post("/api/ask", headers={"X-Request-ID": "bad id with spaces"}, json={"question": "What were total assets?"})
+
+    assert response.headers["X-Request-ID"] == "client-request-17"
+    assert invalid.headers["X-Request-ID"] != "bad id with spaces"
+    assert invalid.headers["X-Request-ID"]
+
+
+def test_json_formatter_emits_operational_fields():
+    record = logging.LogRecord("annual_report", logging.INFO, __file__, 1, "http_request_completed", (), None)
+    record.request_id = "req-1"
+    record.status_code = 200
+    record.latency_ms = 12.5
+    formatted = JsonFormatter().format(record)
+    assert '"event": "http_request_completed"' in formatted
+    assert '"request_id": "req-1"' in formatted
+    assert '"status_code": 200' in formatted
+
+
+def test_ask_endpoint_handles_concurrent_load(monkeypatch):
+    service = FakeService()
+    monkeypatch.setattr("app.main.get_qa_service", lambda: service)
+
+    def request(_):
+        return client.post("/api/ask", json={"question": "What were total assets?"})
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        responses = list(pool.map(request, range(16)))
+
+    assert all(response.status_code == 200 for response in responses)
+    assert len({response.headers["X-Request-ID"] for response in responses}) == 16
 
 
 def test_homepage_exposes_qa_interface():

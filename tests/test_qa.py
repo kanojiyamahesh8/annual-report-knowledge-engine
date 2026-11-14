@@ -4,7 +4,7 @@ from types import SimpleNamespace
 import pytest
 
 from app.config import Settings
-from app.llm import create_llm
+from app.llm import LLMConfigurationError, create_llm
 from app.qa import NOT_FOUND, QAService
 from app.retrieval import BM25Retriever
 
@@ -75,6 +75,9 @@ def test_unsupported_substantive_terms_do_not_reach_llm():
 @pytest.mark.parametrize("provider", ["openai", "gemini", "anthropic"])
 def test_provider_switching_uses_env_provider(monkeypatch, provider):
     monkeypatch.setenv("LLM_PROVIDER", provider)
+    monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
+    monkeypatch.setenv("GOOGLE_API_KEY", "test-google-key")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic-key")
     config = Settings()
     fake = object()
     if provider == "openai":
@@ -93,3 +96,8 @@ def test_provider_switching_uses_env_provider(monkeypatch, provider):
 def test_unknown_provider_is_rejected():
     with pytest.raises(ValueError, match="Unsupported LLM_PROVIDER"):
         create_llm(Settings(llm_provider="unknown"))
+
+
+def test_provider_configuration_requires_credentials():
+    with pytest.raises(LLMConfigurationError, match="Missing API key"):
+        create_llm(Settings(llm_provider="openai", openai_api_key=""))
