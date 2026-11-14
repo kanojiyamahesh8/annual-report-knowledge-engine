@@ -1,8 +1,40 @@
- # Project Status
+# Project Status
+
+## Milestone 4 - Review checkpoint
+
+Status: complete and verified; Milestone 4 commit follows.
+
+Last Updated: 2026-11-14 22:42:49 IST (Asia/Kolkata)
+
+### Completed
+
+- Added LangChain provider switching through `.env` for OpenAI, Gemini and Anthropic Claude, with provider-specific model settings and no API calls during construction.
+- Added evidence-grounded Q&A over the existing BM25 retriever; the LLM receives only retrieved chunks, exact stored excerpts and PDF page metadata.
+- Added prompt requirements for preserving financial years, figures, units and standalone/consolidated scope.
+- Added exact excerpt and PDF-page citation validation against stored retrieval evidence.
+- Citation validation now rejects empty page lists and checks numeric, year, unit and scope claims against the cited chunk text.
+- Unsupported-question detection now rejects queries with multiple unmatched substantive terms before invoking the LLM.
+- Added deterministic rejection for unsupported, unresolved, ambiguous or invalidly cited answers using exactly `Information not found in the provided document`.
+- Added mocked regression tests for empty pages, hallucinated figures paired with valid excerpts, unmatched substantive terms, unsupported and ambiguous questions, all three provider branches and unknown-provider rejection.
+
+### Files created or modified
+
+- `app/llm.py`
+- `app/qa.py`
+- `app/config.py`
+- `tests/test_qa.py`
+- `PROJECT_STATUS.md`
+
+### Verified test results
+
+- `.venv\\Scripts\\python.exe -m pytest -q`: **40 passed, 6 warnings** in 12.08 seconds.
+- No paid API calls were made.
+- Frontend integration was not started.
+- Milestone 4 is complete and committed after review.
 
 Project: Provider-Agnostic Annual Report Knowledge Engine  
-Current milestone: Milestone 3 - Structure-aware chunking and BM25 retrieval  
-Last Updated: 2026-11-14 21:22:11 IST (Asia/Kolkata)
+Current milestone: Milestone 4 - Review checkpoint
+Last Updated: 2026-11-14 22:42:49 IST (Asia/Kolkata)
 
 ## Completed
 
