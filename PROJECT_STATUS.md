@@ -4,7 +4,7 @@
 
 Status: complete and verified; committed after implementation review.
 
-Last Updated: 2026-11-14 22:48:41 IST (Asia/Kolkata)
+Last Updated: 2026-11-14 22:53:10 IST (Asia/Kolkata)
 
 ### Evidence scope decision
 
@@ -20,6 +20,14 @@ Last Updated: 2026-11-14 22:48:41 IST (Asia/Kolkata)
 - Replaced the placeholder page with an accessible Q&A interface showing answers, exact excerpts, PDF page citations, loading state and errors.
 - Added `EVIDENCE_PATH` to `.env.example`.
 
+### Milestone 5 review fixes
+
+- Added real API-path coverage using the checked-in evidence artifact, the real BM25 retriever and `QAService`, with only the LLM mocked.
+- Added error-path tests for missing evidence, provider initialization failure, provider invocation failure and whitespace-only questions.
+- Added server-side whitespace normalization and rejection for blank questions.
+- Classified missing evidence as HTTP 503 and provider initialization/invocation failures as HTTP 502 without exposing internal details.
+- Clarified the exact supported PDF page ranges in the UI, `.env.example` and this status record.
+
 ### Files created or modified
 
 - `app/config.py`
@@ -33,9 +41,9 @@ Last Updated: 2026-11-14 22:48:41 IST (Asia/Kolkata)
 
 ### Verified test results
 
-- `.venv\\Scripts\\python.exe -m pytest -q`: **45 passed, 6 warnings** in 12.10 seconds.
+- `.venv\\Scripts\\python.exe -m pytest -q`: **49 passed, 6 warnings** in 11.34 seconds.
 - No paid API calls were made.
-- Milestone 5 is complete and committed after implementation review.
+- Milestone 5 review fixes are complete and committed after verification.
 
 ### Completed
 
@@ -65,7 +73,7 @@ Last Updated: 2026-11-14 22:48:41 IST (Asia/Kolkata)
 
 Project: Provider-Agnostic Annual Report Knowledge Engine  
 Current milestone: Milestone 5 - Application integration checkpoint
-Last Updated: 2026-11-14 22:48:41 IST (Asia/Kolkata)
+Last Updated: 2026-11-14 22:53:10 IST (Asia/Kolkata)
 
 ## Completed
 
