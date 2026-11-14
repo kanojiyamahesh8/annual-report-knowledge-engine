@@ -86,6 +86,8 @@ def test_provider_switching_uses_env_provider(monkeypatch, provider):
     model, kwargs = create_llm(config)
     assert model is fake
     assert kwargs["model"] == getattr(config, f"{provider if provider != 'gemini' else 'gemini'}_model")
+    assert kwargs["timeout"] == config.llm_timeout_seconds
+    assert kwargs["max_retries"] == config.llm_max_retries
 
 
 def test_unknown_provider_is_rejected():

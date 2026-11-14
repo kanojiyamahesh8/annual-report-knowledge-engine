@@ -12,6 +12,10 @@ from app.retrieval import BM25Retriever, RetrievalResult, tokenize
 
 
 NOT_FOUND = "Information not found in the provided document"
+
+
+class LLMInvocationError(RuntimeError):
+    """The configured provider could not complete an answer request."""
 _SCOPE_WORDS = {"standalone", "consolidated", "group", "company", "parent"}
 _STOPWORDS = {"a", "an", "and", "are", "at", "by", "for", "from", "how", "in", "is", "of", "on", "the", "their", "to", "was", "what", "were", "with"}
 _GENERIC_TERMS = {"amount", "date", "ended", "march", "value", "year"}
@@ -151,7 +155,11 @@ class QAService:
         if not question.strip() or not results or not _has_relevant_overlap(question, results) or _is_scope_ambiguous(question, results):
             return QAResponse(NOT_FOUND, [])
         prompt_value = self._prompt.invoke({"question": question, "evidence": _evidence_payload(results)})
-        parsed = _parse_response(self.llm.invoke(prompt_value))
+        try:
+            raw_response = self.llm.invoke(prompt_value)
+        except Exception as exc:
+            raise LLMInvocationError("LLM provider invocation failed") from exc
+        parsed = _parse_response(raw_response)
         if not parsed or not isinstance(parsed.get("answer"), str):
             return QAResponse(NOT_FOUND, [])
         answer = parsed["answer"].strip()

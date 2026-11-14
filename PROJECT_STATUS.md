@@ -1,16 +1,16 @@
 # Project Status
 
-## Milestone 5 - Application integration checkpoint
+## Milestone 6 - Production-hardening checkpoint
 
-Status: complete and verified; committed after implementation review.
+Status: complete and verified; committed after production-hardening review.
 
-Last Updated: 2026-11-14 22:53:10 IST (Asia/Kolkata)
+Last Updated: 2026-11-14 23:02:42 IST (Asia/Kolkata)
 
 ### Evidence scope decision
 
-- Milestone 5 supports the checked-in `data/selected_evidence.json` corpus: 18 verified annual-report pages covering standalone/consolidated financial statements and selected validated notes.
-- The scope is configurable through `EVIDENCE_PATH`; the API does not claim coverage outside the configured evidence artifact.
-- Full-report extraction remains available in `app/extraction.py`, but a full-report artifact is not silently generated as part of application startup.
+- Milestone 6 resolves the supported scope to the checked-in `data/full_evidence.json` corpus: all 335 PDF pages and 245 extracted financial tables.
+- The full artifact was generated with the existing local PyMuPDF extraction pipeline; no paid API calls or external enrichment were used.
+- The scope remains configurable through `EVIDENCE_PATH`, while the default deployment corpus is the complete annual report.
 
 ### Completed
 
@@ -19,6 +19,15 @@ Last Updated: 2026-11-14 22:53:10 IST (Asia/Kolkata)
 - Added API tests for successful answers, exact fallback responses, invalid questions, hidden provider failures, and homepage integration.
 - Replaced the placeholder page with an accessible Q&A interface showing answers, exact excerpts, PDF page citations, loading state and errors.
 - Added `EVIDENCE_PATH` to `.env.example`.
+
+### Milestone 6 production hardening
+
+- Added `/ready` readiness checks that validate evidence loading, BM25 indexing, provider initialization and report metadata.
+- Added typed `AskResponse`, citation, readiness and error contracts, including stable validation errors.
+- Added provider timeout and bounded retry settings through `LLM_TIMEOUT_SECONDS` and `LLM_MAX_RETRIES`.
+- Added provider invocation error boundaries, request IDs, latency/result logging and safe internal-error responses.
+- Added resilience tests for full-report readiness, missing evidence, provider initialization, provider invocation, request IDs and OpenAPI contracts.
+- Updated the UI and configuration documentation to state complete-report evidence coverage.
 
 ### Milestone 5 review fixes
 
@@ -41,9 +50,9 @@ Last Updated: 2026-11-14 22:53:10 IST (Asia/Kolkata)
 
 ### Verified test results
 
-- `.venv\\Scripts\\python.exe -m pytest -q`: **49 passed, 6 warnings** in 11.34 seconds.
+- `.venv\\Scripts\\python.exe -m pytest -q`: **53 passed, 6 warnings** in 15.67 seconds.
 - No paid API calls were made.
-- Milestone 5 review fixes are complete and committed after verification.
+- Milestone 6 is complete and committed after verification.
 
 ### Completed
 
@@ -72,8 +81,8 @@ Last Updated: 2026-11-14 22:53:10 IST (Asia/Kolkata)
 - Milestone 4 is complete and committed after review.
 
 Project: Provider-Agnostic Annual Report Knowledge Engine  
-Current milestone: Milestone 5 - Application integration checkpoint
-Last Updated: 2026-11-14 22:53:10 IST (Asia/Kolkata)
+Current milestone: Milestone 6 - Production-hardening checkpoint
+Last Updated: 2026-11-14 23:02:42 IST (Asia/Kolkata)
 
 ## Completed
 

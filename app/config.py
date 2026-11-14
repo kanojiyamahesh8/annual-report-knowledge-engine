@@ -17,7 +17,9 @@ class Settings:
     openai_model: str = field(default_factory=lambda: os.getenv("OPENAI_MODEL", "gpt-4o-mini"))
     gemini_model: str = field(default_factory=lambda: os.getenv("GEMINI_MODEL", "gemini-2.0-flash"))
     anthropic_model: str = field(default_factory=lambda: os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-latest"))
-    evidence_path: str = field(default_factory=lambda: os.getenv("EVIDENCE_PATH", "data/selected_evidence.json"))
+    evidence_path: str = field(default_factory=lambda: os.getenv("EVIDENCE_PATH", "data/full_evidence.json"))
+    llm_timeout_seconds: float = field(default_factory=lambda: float(os.getenv("LLM_TIMEOUT_SECONDS", "30")))
+    llm_max_retries: int = field(default_factory=lambda: int(os.getenv("LLM_MAX_RETRIES", "2")))
 
 
 settings = Settings()

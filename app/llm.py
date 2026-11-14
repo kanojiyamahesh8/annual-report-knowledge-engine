@@ -19,15 +19,15 @@ def create_llm(config: Settings | None = None) -> Any:
     if provider == "openai":
         from langchain_openai import ChatOpenAI
 
-        return ChatOpenAI(api_key=config.openai_api_key, model=config.openai_model)
+        return ChatOpenAI(api_key=config.openai_api_key, model=config.openai_model, timeout=config.llm_timeout_seconds, max_retries=config.llm_max_retries)
     if provider == "gemini":
         from langchain_google_genai import ChatGoogleGenerativeAI
 
-        return ChatGoogleGenerativeAI(google_api_key=config.google_api_key, model=config.gemini_model)
+        return ChatGoogleGenerativeAI(google_api_key=config.google_api_key, model=config.gemini_model, timeout=config.llm_timeout_seconds, max_retries=config.llm_max_retries)
     if provider == "anthropic":
         from langchain_anthropic import ChatAnthropic
 
-        return ChatAnthropic(api_key=config.anthropic_api_key, model=config.anthropic_model)
+        return ChatAnthropic(api_key=config.anthropic_api_key, model=config.anthropic_model, timeout=config.llm_timeout_seconds, max_retries=config.llm_max_retries)
     raise ValueError(f"Unsupported LLM_PROVIDER: {config.llm_provider!r}. Expected openai, gemini or anthropic.")
 
 

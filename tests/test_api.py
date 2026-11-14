@@ -4,8 +4,8 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from app.main import app, get_qa_service
-from app.qa import NOT_FOUND
+from app.main import app, get_qa_service, load_configured_evidence
+from app.qa import LLMInvocationError, NOT_FOUND
 
 
 client = TestClient(app)
@@ -65,15 +65,18 @@ def test_ask_endpoint_rejects_whitespace_only_question():
 
 
 def test_ask_endpoint_uses_real_retriever_and_qa_service_with_mocked_llm(monkeypatch):
+    monkeypatch.setattr("app.main.settings", SimpleNamespace(evidence_path="data/selected_evidence.json"))
     monkeypatch.setattr(
         "app.qa.create_llm",
         lambda: MockLLM({"answer": "Standalone total assets were 11,059.12 INR million.", "excerpts": [{"text": "Total assets (1+2) |  | 11,059.12 | 11,204.97", "pages": [131]}]}),
     )
     get_qa_service.cache_clear()
+    load_configured_evidence.cache_clear()
     try:
         response = client.post("/api/ask", json={"question": "What were standalone total assets in 2026?"})
     finally:
         get_qa_service.cache_clear()
+        load_configured_evidence.cache_clear()
 
     assert response.status_code == 200
     assert response.json()["answer"].startswith("Standalone total assets")
@@ -83,10 +86,12 @@ def test_ask_endpoint_uses_real_retriever_and_qa_service_with_mocked_llm(monkeyp
 def test_ask_endpoint_classifies_missing_evidence_as_service_unavailable(monkeypatch, tmp_path: Path):
     monkeypatch.setattr("app.main.settings", SimpleNamespace(evidence_path=str(tmp_path / "missing.json")))
     get_qa_service.cache_clear()
+    load_configured_evidence.cache_clear()
     try:
         response = client.post("/api/ask", json={"question": "What were total assets?"})
     finally:
         get_qa_service.cache_clear()
+        load_configured_evidence.cache_clear()
 
     assert response.status_code == 503
     assert response.json() == {"detail": "Evidence corpus unavailable"}
@@ -100,12 +105,12 @@ def test_ask_endpoint_classifies_provider_initialization_failure(monkeypatch):
     finally:
         get_qa_service.cache_clear()
 
-    assert response.status_code == 502
-    assert response.json() == {"detail": "LLM provider request failed"}
+    assert response.status_code == 503
+    assert response.json() == {"detail": "LLM provider unavailable"}
 
 
 def test_ask_endpoint_hides_provider_failures(monkeypatch):
-    service = FakeService(error=RuntimeError("secret provider detail"))
+    service = FakeService(error=LLMInvocationError("secret provider detail"))
     monkeypatch.setattr("app.main.get_qa_service", lambda: service)
 
     response = client.post("/api/ask", json={"question": "What were total assets?"})
@@ -113,6 +118,62 @@ def test_ask_endpoint_hides_provider_failures(monkeypatch):
     assert response.status_code == 502
     assert response.json() == {"detail": "LLM provider request failed"}
     assert "secret provider detail" not in response.text
+
+
+def test_real_service_provider_invocation_failure_is_502(monkeypatch):
+    class FailingLLM:
+        def invoke(self, prompt):
+            raise RuntimeError("secret provider detail")
+
+    monkeypatch.setattr("app.qa.create_llm", FailingLLM)
+    get_qa_service.cache_clear()
+    try:
+        response = client.post("/api/ask", json={"question": "What were standalone total assets in 2026?"})
+    finally:
+        get_qa_service.cache_clear()
+
+    assert response.status_code == 502
+    assert response.json() == {"detail": "LLM provider request failed"}
+    assert response.headers["X-Request-ID"]
+
+
+def test_readiness_reports_full_evidence_scope(monkeypatch):
+    monkeypatch.setattr("app.qa.create_llm", lambda: MockLLM({"answer": NOT_FOUND, "excerpts": []}))
+    get_qa_service.cache_clear()
+    load_configured_evidence.cache_clear()
+    try:
+        response = client.get("/ready")
+    finally:
+        get_qa_service.cache_clear()
+        load_configured_evidence.cache_clear()
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "ready"
+    assert payload["page_count"] == 335
+    assert payload["indexed_pages"] == 335
+    assert payload["table_count"] == 245
+
+
+def test_readiness_reports_missing_evidence_as_503(monkeypatch, tmp_path: Path):
+    monkeypatch.setattr("app.main.settings", SimpleNamespace(evidence_path=str(tmp_path / "missing.json")))
+    get_qa_service.cache_clear()
+    load_configured_evidence.cache_clear()
+    try:
+        response = client.get("/ready")
+    finally:
+        get_qa_service.cache_clear()
+        load_configured_evidence.cache_clear()
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "Evidence corpus unavailable"}
+
+
+def test_openapi_documents_typed_ask_contract():
+    schema = client.get("/openapi.json").json()
+    ask_responses = schema["paths"]["/api/ask"]["post"]["responses"]
+    assert "#/components/schemas/AskResponse" in str(ask_responses["200"])
+    assert "#/components/schemas/ErrorResponse" in str(ask_responses["502"])
 
 
 def test_homepage_exposes_qa_interface():
