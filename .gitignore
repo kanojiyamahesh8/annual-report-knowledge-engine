@@ -9,3 +9,4 @@ __pycache__/
 .idea/
 project_structure.txt
 documents/*.pdf
+tempMile.txt

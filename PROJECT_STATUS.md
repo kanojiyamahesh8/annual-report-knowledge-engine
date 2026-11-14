@@ -1,8 +1,8 @@
  # Project Status
 
 Project: Provider-Agnostic Annual Report Knowledge Engine  
-Current milestone: Milestone 2 completed - extraction validation and evidence serialization  
-Last Updated: 2026-11-14 20:47:33 IST (Asia/Kolkata)
+Current milestone: Milestone 3 - Structure-aware chunking and BM25 retrieval  
+Last Updated: 2026-11-14 21:22:11 IST (Asia/Kolkata)
 
 ## Completed
 
@@ -379,3 +379,109 @@ Last Updated: 2026-11-14 20:47:33 IST (Asia/Kolkata)
 - Initial publication push: succeeded; `origin/master` matched local `master` at that commit.
 - Publication status: source, tests, requirements and documentation pushed successfully; source PDF, secrets, `.venv`, caches and IDE files were excluded.
 - This status update is the final publication record and will be committed and pushed as a follow-up commit.
+
+## Milestone 3 initial implementation
+
+### Completed
+
+- Added `app/retrieval.py` with explicit evidence chunking and BM25 retrieval using `rank-bm25`.
+- Page text is chunked by paragraph boundaries with a configurable character limit and retains PDF source pages and raw excerpts.
+- Financial tables are emitted as atomic `financial_table` chunks and are never split; table IDs, source pages, headers, semantic headers, units and raw excerpts are retained.
+- Added `load_evidence()` and `BM25Retriever.from_evidence()` for the verified local JSON evidence format.
+- Added transparent tokenization and ranked results containing chunk IDs, source pages, source table IDs and scores.
+- No LLM provider integration, provider factory, API calls, vector database or LangChain retrieval logic was added.
+
+### Files created or modified
+
+- `app/retrieval.py` - created.
+- `tests/test_retrieval.py` - created.
+- `PROJECT_STATUS.md` - modified.
+
+### Tests executed and results
+
+- Complete pytest suite: passed, 13 tests passed, 6 deprecation warnings in 12.74 seconds.
+- BM25 smoke test over `data/selected_evidence.json`: passed; returned ranked page and financial-table evidence with source pages for the `total assets 2026` query.
+- Tests cover atomic tables, source-page retention, BM25 ranking, and empty-query behavior.
+
+### Technical decisions
+
+- Keep BM25 and chunking explicit Python code; LangChain remains reserved for later LLM integration and prompt handling.
+- Preserve table atomicity even when a table exceeds the normal page-text chunk size.
+- Return evidence metadata with every retrieval result so later answer generation can cite stored pages and excerpts.
+
+### Known issues / next recommended action
+
+- Retrieval ranking is now functional over local evidence, but question-specific relevance evaluation over a broader set of actual annual-report questions remains to be added.
+- Citation validation, fallback responses and provider integration are intentionally deferred.
+- Continue Milestone 3 with retrieval evaluation tests before beginning Milestone 4 provider integration.
+
+## Milestone 3 real-report retrieval evaluation
+
+### Completed
+
+- Added `tests/test_retrieval_evaluation.py` with five questions based on verified annual-report figures and table layouts.
+- Evaluation now asserts the expected table ID, PDF source pages, chunk ID and exact supporting excerpt for each result.
+- Added page-heading context to financial-table BM25 text so standalone and consolidated statements are disambiguated without changing raw excerpts or table atomicity.
+
+### Evaluation cases and verified evidence
+
+- Standalone total assets: `table-0001`, PDF page 131, excerpt includes `11,059.12` and `11,204.97`.
+- Standalone revenue from operations: `table-0002`, PDF page 132, excerpt includes `9,730.56` and `7,760.93`.
+- Consolidated revenue from operations: `table-0019`, PDF page 228, exact table excerpt verified.
+- Consolidated ending cash and cash equivalents: `table-0020`, PDF pages 229-230, exact supporting excerpt verified.
+- Apparao Mallavarapu promoter shares: `table-0012`, PDF pages 165-166, excerpt includes `52,31,549`.
+
+### Tests executed and results
+
+- Real-report retrieval evaluation: passed, 5 tests passed.
+- Complete pytest suite: passed, 18 tests passed, 6 deprecation warnings in 11.31 seconds.
+
+### Next recommended action
+
+- Continue Milestone 3 with broader retrieval questions and ranking-quality checks. Citation validation, fallback handling and LLM provider integration remain deferred; Milestone 4 has not started.
+
+## Milestone 3 broader retrieval evaluation
+
+### Completed
+
+- Expanded `tests/test_retrieval_evaluation.py` with eight additional real-report questions covering current assets, operating and investing cash flows, ending cash, receivables ageing, payables ageing, PPE net block and consolidated total assets.
+- Added ranking-quality checks requiring expected financial-table evidence in the top five results.
+- Added scope-specific ranking checks: standalone total current assets ranks `table-0001` first, and consolidated total assets ranks `table-0018` first.
+- Verified evidence pages and excerpts for all broader cases, including multi-page tables on 161-162, 173-174 and 229-230.
+
+### Tests executed and results
+
+- Retrieval evaluation suite: passed, 14 tests passed.
+- Complete pytest suite: passed, 27 tests passed, 6 deprecation warnings in 9.10 seconds.
+
+### Known issues / next recommended action
+
+- BM25 evaluation now covers 13 real annual-report questions plus scope-ranking checks, but broader benchmark generation and negative/ambiguous query evaluation remain future Milestone 3 work.
+- Citation validation, mandatory fallback behavior and LLM provider integration remain deferred. Milestone 4 has not started.
+
+## Milestone 3 negative, ambiguous and citation-readiness evaluation
+
+### Completed
+
+- Added unsupported-question evaluation for a lunar-mining query; retrieval returns no exact unsupported phrase or excerpt, so no false evidence match is accepted by the test.
+- Added ambiguous-question evaluation for `What was revenue?`; retrieval exposes both standalone (`table-0002`, page 132) and consolidated (`table-0019`, page 228) evidence scopes rather than treating the question as uniquely resolved.
+- Added citation-readiness checks confirming a selected table result carries a stable chunk ID, table ID, PDF source pages, and a non-empty raw excerpt containing the verified figure.
+
+### Tests executed and results
+
+- Retrieval evaluation suite: passed, 17 tests passed.
+- Complete pytest suite: passed, 30 tests passed, 6 deprecation warnings in 8.44 seconds.
+
+### Known issues / next recommended action
+
+- Negative and ambiguous behavior is evaluated at retrieval level only. The mandatory fallback response and answer-level citation validation remain intentionally unimplemented until the Q&A service milestone.
+- Milestone 4 provider integration has not started. Continue Milestone 3 only if additional retrieval benchmark coverage is needed; otherwise stop at the milestone boundary for review.
+
+## Milestone 3 Git checkpoint
+
+- Milestone 3 is complete for the current scope: structure-aware chunking, atomic financial-table evidence, BM25 retrieval, real-report evaluations, negative/ambiguous query checks, and citation-ready metadata are implemented and tested.
+- Complete test suite verified by Codex: 30 passed, 6 deprecation warnings.
+- Files reviewed for this checkpoint include `app/retrieval.py`, `tests/test_retrieval.py`, and `tests/test_retrieval_evaluation.py`.
+- GitHub remote remains `https://github.com/kanojiyamahesh8/annual-report-knowledge-engine.git` on the current `master` branch.
+- `.env`, `.venv`, caches, IDE files, source PDF, generated structure data and temporary `tempMile.txt` remain excluded.
+- Milestone 4 provider integration has not started.
