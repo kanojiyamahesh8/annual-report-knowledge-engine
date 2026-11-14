@@ -5,8 +5,8 @@ import pytest
 
 from app.config import Settings
 from app.llm import LLMConfigurationError, create_llm
-from app.qa import NOT_FOUND, QAService
-from app.retrieval import BM25Retriever
+from app.qa import NOT_FOUND, QAService, _evidence_payload
+from app.retrieval import BM25Retriever, EvidenceChunk, RetrievalResult
 
 
 def evidence() -> dict:
@@ -47,6 +47,23 @@ def test_invalid_citation_is_rejected():
     assert response.excerpts == []
 
 
+def test_large_table_payload_keeps_relevant_exact_lines_and_is_bounded():
+    chunk = EvidenceChunk(
+        chunk_id="table-large",
+        kind="financial_table",
+        text="Consolidated balance sheet " + "irrelevant " * 3000,
+        source_pages=[227],
+        raw_excerpt="\n".join(
+            ["Particulars | March 31, 2026 | March 31, 2025"]
+            + [f"Other row {index} | {index} | {index}" for index in range(200)]
+            + ["Total assets (1+2+3) | 13,027.12 | 12,394.46"]
+        ),
+    )
+    payload = json.loads(_evidence_payload([RetrievalResult(chunk=chunk, score=1.0)], "consolidated total assets 2026"))
+    assert "Total assets (1+2+3) | 13,027.12 | 12,394.46" in payload[0]["exact_excerpt_lines"]
+    assert len(json.dumps(payload)) < 5000
+
+
 def test_empty_pages_are_rejected():
     llm = MockLLM({"answer": "Standalone total assets were 11,059.12 INR million.", "excerpts": [{"text": "Total assets |  | 11,059.12 | 11,204.97", "pages": []}]})
     response = QAService(BM25Retriever.from_evidence(evidence()), llm=llm).ask("What were standalone total assets in 2026?")
@@ -72,20 +89,23 @@ def test_unsupported_substantive_terms_do_not_reach_llm():
     assert llm.inputs == []
 
 
-@pytest.mark.parametrize("provider", ["openai", "gemini", "anthropic"])
+@pytest.mark.parametrize("provider", ["openai", "gemini", "anthropic", "groq"])
 def test_provider_switching_uses_env_provider(monkeypatch, provider):
     monkeypatch.setenv("LLM_PROVIDER", provider)
     monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
     monkeypatch.setenv("GOOGLE_API_KEY", "test-google-key")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic-key")
+    monkeypatch.setenv("GROQ_API_KEY", "test-groq-key")
     config = Settings()
     fake = object()
     if provider == "openai":
         monkeypatch.setattr("langchain_openai.ChatOpenAI", lambda **kwargs: (fake, kwargs))
     elif provider == "gemini":
         monkeypatch.setattr("langchain_google_genai.ChatGoogleGenerativeAI", lambda **kwargs: (fake, kwargs))
-    else:
+    elif provider == "anthropic":
         monkeypatch.setattr("langchain_anthropic.ChatAnthropic", lambda **kwargs: (fake, kwargs))
+    else:
+        monkeypatch.setattr("langchain_groq.ChatGroq", lambda **kwargs: (fake, kwargs))
     model, kwargs = create_llm(config)
     assert model is fake
     assert kwargs["model"] == getattr(config, f"{provider if provider != 'gemini' else 'gemini'}_model")

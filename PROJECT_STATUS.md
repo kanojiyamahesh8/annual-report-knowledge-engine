@@ -4,7 +4,7 @@
 
 Status: complete and verified; committed after operational-hardening review.
 
-Last Updated: 2026-11-14 23:10:58 IST (Asia/Kolkata)
+Last Updated: 2026-11-15 01:33:26 IST (Asia/Kolkata)
 
 ### Evidence scope decision
 
@@ -32,10 +32,14 @@ Last Updated: 2026-11-14 23:10:58 IST (Asia/Kolkata)
 ### Milestone 7 operational hardening
 
 - Added validated provider configuration, including required credentials, positive timeouts and bounded retry counts.
+- Added optional Groq provider support through `GROQ_API_KEY` and `GROQ_MODEL`, while preserving OpenAI, Gemini and Anthropic switching.
 - Added JSON-formatted operational logging with request IDs, route, status and latency fields; sensitive request content is excluded.
 - Added request-ID middleware that preserves safe client IDs and replaces invalid IDs consistently across responses.
 - Added explicit provider-configuration versus unexpected initialization error classes and stable readiness/API status handling.
 - Added retry-setting, credential-validation, structured-log, request-ID and concurrent-load tests.
+- Added LangChain Groq support with `GROQ_API_KEY` and configurable `GROQ_MODEL`, preserving the existing OpenAI, Gemini and Anthropic provider branches.
+- Added full-report scope-aware BM25 ranking for standalone/consolidated statement questions and regression coverage for consolidated total assets on PDF page 227.
+- Added bounded, query-relevant financial-table payloads for LLM prompts while retaining exact validation against the original stored excerpts.
 - Corrected stale Milestone 5 status statements for the full-report scope and current HTTP error classifications.
 
 ### Milestone 5 review fixes
@@ -59,7 +63,7 @@ Last Updated: 2026-11-14 23:10:58 IST (Asia/Kolkata)
 
 ### Verified test results
 
-- `.venv\\Scripts\\python.exe -m pytest -q`: **57 passed, 6 warnings** in 25.94 seconds.
+- `.venv\\Scripts\\python.exe -m pytest -q`: **60 passed, 6 warnings** in 40.04 seconds.
 - No paid API calls were made.
 - Milestone 7 is complete and committed after verification.
 
@@ -91,7 +95,7 @@ Last Updated: 2026-11-14 23:10:58 IST (Asia/Kolkata)
 
 Project: Provider-Agnostic Annual Report Knowledge Engine  
 Current milestone: Milestone 7 - Operational hardening checkpoint
-Last Updated: 2026-11-14 23:10:58 IST (Asia/Kolkata)
+Last Updated: 2026-11-15 01:33:26 IST (Asia/Kolkata)
 
 ## Completed
 

@@ -66,14 +66,41 @@ def _is_scope_ambiguous(question: str, results: list[RetrievalResult]) -> bool:
     return 0 in scopes and 1 in scopes
 
 
-def _evidence_payload(results: list[RetrievalResult]) -> str:
+def _compact_excerpt(chunk: Any, question: str, max_chars: int = 2200) -> list[str]:
+    """Keep exact, query-relevant table lines while bounding prompt size."""
+    raw_lines = [line for line in (chunk.raw_excerpt or chunk.text).splitlines() if line.strip()]
+    if not raw_lines:
+        return []
+    if chunk.kind != "financial_table":
+        return raw_lines[:1]
+    query_tokens = _content_tokens(question)
+    selected_indices = {index for index, line in enumerate(raw_lines[:2])}
+    selected_indices.update(
+        index for index, line in enumerate(raw_lines) if query_tokens.intersection(_content_tokens(line))
+    )
+    selected: list[str] = []
+    current_size = 0
+    for index, line in enumerate(raw_lines):
+        if index not in selected_indices:
+            continue
+        if current_size + len(line) + 1 > max_chars and index not in selected_indices.intersection(
+            {i for i, candidate in enumerate(raw_lines) if query_tokens.intersection(_content_tokens(candidate))}
+        ):
+            continue
+        selected.append(line)
+        current_size += len(line) + 1
+    return selected
+
+
+def _evidence_payload(results: list[RetrievalResult], question: str) -> str:
     payload = []
     for result in results:
         chunk = result.chunk
+        exact_lines = _compact_excerpt(chunk, question)
         payload.append({
             "chunk_id": chunk.chunk_id,
-            "text": chunk.text,
-            "exact_excerpt": chunk.raw_excerpt or chunk.text,
+            "text": chunk.text if chunk.kind != "financial_table" else chunk.text[:600],
+            "exact_excerpt_lines": exact_lines,
             "pdf_pages": chunk.source_pages,
         })
     return json.dumps(payload, ensure_ascii=False)
@@ -154,7 +181,7 @@ class QAService:
         results = self.retriever.search(question, top_k=self.top_k)
         if not question.strip() or not results or not _has_relevant_overlap(question, results) or _is_scope_ambiguous(question, results):
             return QAResponse(NOT_FOUND, [])
-        prompt_value = self._prompt.invoke({"question": question, "evidence": _evidence_payload(results)})
+        prompt_value = self._prompt.invoke({"question": question, "evidence": _evidence_payload(results, question)})
         try:
             raw_response = self.llm.invoke(prompt_value)
         except Exception as exc:

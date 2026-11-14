@@ -9,7 +9,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from app.config import Settings, settings
 
 
-SUPPORTED_PROVIDERS = {"openai", "gemini", "anthropic"}
+SUPPORTED_PROVIDERS = {"openai", "gemini", "anthropic", "groq"}
 
 
 class LLMConfigurationError(ValueError):
@@ -26,6 +26,7 @@ def validate_llm_settings(config: Settings) -> None:
         "openai": config.openai_api_key,
         "gemini": config.google_api_key,
         "anthropic": config.anthropic_api_key,
+        "groq": config.groq_api_key,
     }[provider]
     if not api_key.strip():
         raise LLMConfigurationError(f"Missing API key for provider: {provider}")
@@ -52,7 +53,11 @@ def create_llm(config: Settings | None = None) -> Any:
         from langchain_anthropic import ChatAnthropic
 
         return ChatAnthropic(api_key=config.anthropic_api_key, model=config.anthropic_model, timeout=config.llm_timeout_seconds, max_retries=config.llm_max_retries)
-    raise LLMConfigurationError(f"Unsupported LLM_PROVIDER: {config.llm_provider!r}. Expected openai, gemini or anthropic.")
+    if provider == "groq":
+        from langchain_groq import ChatGroq
+
+        return ChatGroq(groq_api_key=config.groq_api_key, model=config.groq_model, timeout=config.llm_timeout_seconds, max_retries=config.llm_max_retries)
+    raise LLMConfigurationError(f"Unsupported LLM_PROVIDER: {config.llm_provider!r}. Expected openai, gemini, anthropic or groq.")
 
 
 def qa_prompt() -> ChatPromptTemplate:
@@ -65,7 +70,9 @@ Do not use outside knowledge or infer missing values. Preserve the financial yea
 standalone/consolidated scope, units, signs and exact figures. Return JSON only with
 this shape: {{"answer": "...", "excerpts": [{{"text": "exact supporting excerpt", "pages": [131]}}]}}.
 Every factual statement must be supported by an exact excerpt copied from evidence.
-Use PDF page numbers from the evidence. If evidence is insufficient or the question
+Use PDF page numbers from the evidence. For table citations, copy one complete line
+from exact_excerpt_lines exactly, including separators and blank table cells; do not
+rewrite, summarize, or remove separators. If evidence is insufficient or the question
 is ambiguous, return exactly {{"answer": "Information not found in the provided document", "excerpts": []}}.""",
             ),
             (

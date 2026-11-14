@@ -6,11 +6,17 @@ from app.retrieval import BM25Retriever, load_evidence
 
 
 EVIDENCE_PATH = Path("data/selected_evidence.json")
+FULL_EVIDENCE_PATH = Path("data/full_evidence.json")
 
 
 @pytest.fixture(scope="module")
 def retriever() -> BM25Retriever:
     return BM25Retriever.from_evidence(load_evidence(EVIDENCE_PATH))
+
+
+@pytest.fixture(scope="module")
+def full_retriever() -> BM25Retriever:
+    return BM25Retriever.from_evidence(load_evidence(FULL_EVIDENCE_PATH))
 
 
 @pytest.mark.parametrize(
@@ -119,6 +125,19 @@ def test_scope_specific_questions_rank_expected_statement_first(retriever: BM25R
 
     assert standalone[0].chunk.source_table_id == "table-0001"
     assert consolidated[0].chunk.source_table_id == "table-0018"
+
+
+def test_full_report_scope_specific_question_ranks_consolidated_balance_sheet_first(
+    full_retriever: BM25Retriever,
+) -> None:
+    results = full_retriever.search(
+        "What was Total assets (1+2+3) in the consolidated balance sheet as at March 31, 2026?",
+        top_k=5,
+    )
+
+    assert results[0].chunk.source_table_id == "table-0148"
+    assert results[0].chunk.source_pages == [227]
+    assert "13,027.12" in (results[0].chunk.raw_excerpt or "")
 
 
 def test_negative_question_has_no_exact_unsupported_evidence(retriever: BM25Retriever) -> None:
