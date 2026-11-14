@@ -2,7 +2,7 @@
 
 Project: Provider-Agnostic Annual Report Knowledge Engine  
 Current milestone: Milestone 2 completed - extraction validation and evidence serialization  
-Last Updated: 2026-11-14 20:40:22 IST (Asia/Kolkata)
+Last Updated: 2026-11-14 20:47:33 IST (Asia/Kolkata)
 
 ## Completed
 
@@ -370,3 +370,12 @@ Last Updated: 2026-11-14 20:40:22 IST (Asia/Kolkata)
 - Local Milestone 2 changes are prepared for commit and publication.
 - GitHub repository creation and push are pending authentication/tool availability; no remote is configured yet.
 - The source PDF, `.env`, `.venv`, caches and IDE metadata remain excluded by `.gitignore`.
+
+## GitHub publication
+
+- Public repository: https://github.com/kanojiyamahesh8/annual-report-knowledge-engine
+- Remote: `origin` set to the repository URL above.
+- Local Milestone 2 HEAD before this status update: `2711b12e158093a1bcd545b2eebcd896031bf99f`.
+- Initial publication push: succeeded; `origin/master` matched local `master` at that commit.
+- Publication status: source, tests, requirements and documentation pushed successfully; source PDF, secrets, `.venv`, caches and IDE files were excluded.
+- This status update is the final publication record and will be committed and pushed as a follow-up commit.
