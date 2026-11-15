@@ -1,4 +1,11 @@
-from app.extraction import ExtractedDocument, ExtractedPage, FinancialTable, TableFragment, stitch_table_fragments
+from app.extraction import (
+    ExtractedDocument,
+    ExtractedPage,
+    FinancialTable,
+    TableFragment,
+    resolve_table_cell,
+    stitch_table_fragments,
+)
 
 
 def test_stitches_repeated_header_across_pages() -> None:
@@ -30,6 +37,10 @@ def test_stitches_repeated_header_across_pages() -> None:
         ["Trade receivables", "100.00", "90.00"],
         ["Other receivables", "25.00", "20.00"],
     ]
+    first_row_cells = [cell for cell in tables[0].cells if cell["row_label"] == "Trade receivables"]
+    second_row_cells = [cell for cell in tables[0].cells if cell["row_label"] == "Other receivables"]
+    assert all(cell["pdf_pages"] == [161] for cell in first_row_cells)
+    assert all(cell["pdf_pages"] == [162] for cell in second_row_cells)
     assert "Trade receivables" in tables[0].raw_excerpt
     assert "Other receivables" in tables[0].raw_excerpt
 
@@ -70,3 +81,23 @@ def test_evidence_serialization_preserves_pages_tables_and_raw_excerpt(tmp_path)
     assert '"page_count": 10' in payload
     assert '"source_pages": [\n        3,\n        4\n      ]' in payload
     assert "Cash | 100.00" in payload
+
+
+def test_cell_resolution_supports_year_alias_and_rejects_duplicate_columns() -> None:
+    table = FinancialTable(
+        table_id="table-0002",
+        source_pages=[7],
+        headers=["Particulars", "As at March 31, 2026", "As at March 31, 2025"],
+        rows=[["Total", "100.00", "90.00"]],
+        raw_excerpts=["Particulars | As at March 31, 2026 | As at March 31, 2025\nTotal | 100.00 | 90.00"],
+        year_columns={"2026": 1, "2025": 2},
+        row_labels=["Total"],
+        cells=[
+            {"row_label": "Total", "column_label": "As at March 31, 2026", "value": "100.00"},
+            {"row_label": "Total", "column_label": "As at March 31, 2025", "value": "90.00"},
+        ],
+    )
+
+    assert resolve_table_cell(table, "Total", "2026")["value"] == "100.00"
+    table.cells.append({"row_label": "Total", "column_label": "2026", "value": "ambiguous"})
+    assert resolve_table_cell(table, "Total", "2026") is None

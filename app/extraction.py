@@ -31,6 +31,7 @@ PPE_GROUPS = {
     "Accumulated depreciation": PPE_COLUMNS,
     "Net block": PPE_COLUMNS,
 }
+_YEAR_PATTERN = re.compile(r"\b(?:19|20)\d{2}\b")
 
 
 def _clean_cell(value: Any) -> str:
@@ -39,6 +40,106 @@ def _clean_cell(value: Any) -> str:
 
 def _header_key(row: Iterable[str]) -> tuple[str, ...]:
     return tuple(_clean_cell(cell).casefold() for cell in row)
+
+
+def _normalized_label(value: str) -> str:
+    return " ".join(_clean_cell(value).casefold().split())
+
+
+def _year_columns(headers: list[str]) -> dict[str, int]:
+    """Map each explicitly printed year to its table column index."""
+    columns: dict[str, int] = {}
+    for index, header in enumerate(headers):
+        for year in _YEAR_PATTERN.findall(header):
+            columns.setdefault(year, index)
+    return columns
+
+
+def _table_cells(
+    headers: list[str],
+    rows: list[list[str]],
+    semantic_headers: list[str] | None = None,
+    raw_excerpt: str = "",
+    row_pages: list[int] | None = None,
+) -> list[dict[str, Any]]:
+    """Create auditable row/column/value records without changing raw rows."""
+    cells: list[dict[str, Any]] = []
+    for row_index, row in enumerate(rows):
+        if not row:
+            continue
+        row_label = row[0]
+        cell_pages = (
+            [row_pages[row_index]]
+            if row_pages is not None and row_index < len(row_pages)
+            else []
+        )
+        for index, value in enumerate(row[1:], start=1):
+            if index >= len(headers):
+                continue
+            cells.append(
+                {
+                    "row_label": row_label,
+                    "column_label": headers[index],
+                    "column_index": index,
+                    "value": value,
+                    "pdf_pages": cell_pages,
+                }
+            )
+    # PyMuPDF can transpose complex grouped tables. Preserve an explicit
+    # semantic PPE total when the extractor has already identified that schema.
+    if semantic_headers == PPE_COLUMNS and "Net block" in raw_excerpt:
+        tail = raw_excerpt[raw_excerpt.casefold().find("net block") :]
+        values = re.findall(r"(?<![A-Za-z])\(?\d[\d,]*(?:\.\d+)?\)?", tail)
+        if values:
+            cells.append({
+                "row_label": "Net block",
+                "column_label": "Total",
+                "column_index": len(PPE_COLUMNS) - 1,
+                "value": values[0],
+                "pdf_pages": sorted(set(row_pages or [])),
+            })
+    return cells
+
+
+def _annotate_cells(
+    cells: list[dict[str, Any]],
+    table_id: str,
+    source_pages: list[int],
+    section: str | None,
+    scope: str | None,
+) -> list[dict[str, Any]]:
+    """Attach stable provenance to every cell without changing its value mapping."""
+    return [
+        {
+            **cell,
+            "table_id": table_id,
+            "pdf_pages": cell.get("pdf_pages") or list(source_pages),
+            "section": section,
+            "scope": scope,
+        }
+        for cell in cells
+    ]
+
+
+def resolve_table_cell(
+    table: "FinancialTable", row_label: str, column_label: str
+) -> dict[str, Any] | None:
+    """Resolve one exact row/column pair; return None when it is missing or ambiguous."""
+    wanted_row = _normalized_label(row_label)
+    wanted_column = _normalized_label(column_label)
+    matches = [
+        cell
+        for cell in table.cells
+        if _normalized_label(str(cell["row_label"])) == wanted_row
+        and (
+            _normalized_label(str(cell["column_label"])) == wanted_column
+            or (
+                wanted_column in _year_columns([str(cell["column_label"])])
+                and wanted_column in _normalized_label(str(cell["column_label"]))
+            )
+        )
+    ]
+    return matches[0] if len(matches) == 1 else None
 
 
 def _find_printed_page_number(text: str) -> int | None:
@@ -71,6 +172,8 @@ class TableFragment:
     raw_excerpt: str
     unit: str | None = None
     title: str | None = None
+    section: str | None = None
+    scope: str | None = None
 
     @property
     def headers(self) -> list[str]:
@@ -106,6 +209,11 @@ class FinancialTable:
     title: str | None = None
     semantic_headers: list[str] | None = None
     semantic_groups: dict[str, list[str]] = field(default_factory=dict)
+    section: str | None = None
+    scope: str | None = None
+    year_columns: dict[str, int] = field(default_factory=dict)
+    row_labels: list[str] = field(default_factory=list)
+    cells: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def raw_excerpt(self) -> str:
@@ -122,6 +230,11 @@ class FinancialTable:
             "title": self.title,
             "semantic_headers": self.semantic_headers or self.headers,
             "semantic_groups": self.semantic_groups,
+            "section": self.section,
+            "scope": self.scope,
+            "year_columns": self.year_columns,
+            "row_labels": self.row_labels,
+            "cells": self.cells,
         }
 
 
@@ -156,6 +269,23 @@ def _table_rows(table: Any) -> list[list[str]]:
 
 def _raw_excerpt(rows: list[list[str]]) -> str:
     return "\n".join(" | ".join(row) for row in rows)
+
+
+def _infer_section(text: str) -> str | None:
+    for line in (line.strip() for line in text.splitlines() if line.strip()):
+        lowered = line.casefold()
+        if any(term in lowered for term in ("balance sheet", "statement of profit", "cash flows", "notes to")):
+            return line[:160]
+    return None
+
+
+def _infer_scope(text: str) -> str | None:
+    lowered = text.casefold()
+    if "consolidated" in lowered:
+        return "consolidated"
+    if "standalone" in lowered:
+        return "standalone"
+    return None
 
 
 def _normalized_headers(rows: list[list[str]]) -> tuple[list[str], list[list[str]]]:
@@ -198,6 +328,7 @@ def _extract_page_table_fragments_batch(
     fragments: list[TableFragment] = []
     for page_number in page_numbers:
         page = document[page_number - 1]
+        page_text = page.get_text("text")
         for table in page.find_tables().tables:
             rows = _table_rows(table)
             if rows:
@@ -206,6 +337,8 @@ def _extract_page_table_fragments_batch(
                         pdf_page_number=page_number,
                         rows=rows,
                         raw_excerpt=_raw_excerpt(rows),
+                        section=_infer_section(page_text),
+                        scope=_infer_scope(page_text),
                     )
                 )
     document.close()
@@ -226,12 +359,13 @@ def stitch_table_fragments(fragments: Iterable[TableFragment]) -> list[Financial
     stitched: list[FinancialTable] = []
     current_fragment: TableFragment | None = None
     current_rows: list[list[str]] = []
+    current_row_pages: list[int] = []
     current_pages: list[int] = []
     current_excerpts: list[str] = []
     current_id = 0
 
     def flush() -> None:
-        nonlocal current_fragment, current_rows, current_pages, current_excerpts, current_id
+        nonlocal current_fragment, current_rows, current_row_pages, current_pages, current_excerpts, current_id
         if current_fragment is None:
             return
         current_id += 1
@@ -246,10 +380,28 @@ def stitch_table_fragments(fragments: Iterable[TableFragment]) -> list[Financial
                 title=current_fragment.title,
                 semantic_headers=current_fragment.semantic_headers,
                 semantic_groups=current_fragment.semantic_groups,
+                section=current_fragment.section,
+                scope=current_fragment.scope,
+                year_columns=_year_columns(current_fragment.headers),
+                row_labels=[row[0] for row in current_rows if row],
+                cells=_annotate_cells(
+                    _table_cells(
+                        current_fragment.headers,
+                        current_rows,
+                        current_fragment.semantic_headers,
+                        "\n".join(current_excerpts),
+                        current_row_pages,
+                    ),
+                    f"table-{current_id:04d}",
+                    current_pages,
+                    current_fragment.section,
+                    current_fragment.scope,
+                ),
             )
         )
         current_fragment = None
         current_rows = []
+        current_row_pages = []
         current_pages = []
         current_excerpts = []
 
@@ -257,16 +409,19 @@ def stitch_table_fragments(fragments: Iterable[TableFragment]) -> list[Financial
         if current_fragment is None:
             current_fragment = fragment
             current_rows = list(fragment.data_rows)
+            current_row_pages = [fragment.pdf_page_number] * len(fragment.data_rows)
             current_pages = [fragment.pdf_page_number]
             current_excerpts = [fragment.raw_excerpt]
         elif _stitchable(current_fragment, fragment):
             current_rows.extend(fragment.data_rows)
+            current_row_pages.extend([fragment.pdf_page_number] * len(fragment.data_rows))
             current_pages.append(fragment.pdf_page_number)
             current_excerpts.append(fragment.raw_excerpt)
         else:
             flush()
             current_fragment = fragment
             current_rows = list(fragment.data_rows)
+            current_row_pages = [fragment.pdf_page_number] * len(fragment.data_rows)
             current_pages = [fragment.pdf_page_number]
             current_excerpts = [fragment.raw_excerpt]
     flush()

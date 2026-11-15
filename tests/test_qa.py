@@ -64,6 +64,40 @@ def test_large_table_payload_keeps_relevant_exact_lines_and_is_bounded():
     assert len(json.dumps(payload)) < 5000
 
 
+def test_payload_includes_unambiguous_deterministic_cell_mapping():
+    retriever = BM25Retriever.from_evidence(evidence())
+    results = retriever.search("standalone total assets 2026", top_k=2)
+    payload = json.loads(_evidence_payload(results, "standalone total assets 2026"))
+    standalone = next(item for item in payload if item["pdf_pages"] == [131])
+    assert standalone["deterministic_cells"][0]["value"] == "11,059.12"
+    assert standalone["deterministic_cells"][0]["column_label"] == "2026"
+    assert standalone["deterministic_cells"][0]["pdf_pages"] == [131]
+    assert standalone["deterministic_cells"][0]["table_id"] == "table-0001"
+
+
+def test_payload_does_not_leak_deterministic_cells_across_scope():
+    retriever = BM25Retriever.from_evidence(evidence())
+    results = [
+        RetrievalResult(chunk=chunk, score=1.0)
+        for chunk in retriever.chunks
+        if chunk.kind == "financial_table"
+    ]
+    payload = json.loads(_evidence_payload(results, "standalone total assets 2026"))
+    consolidated = next(item for item in payload if item["pdf_pages"] == [227])
+    assert "deterministic_cells" not in consolidated
+
+
+def test_answer_with_wrong_year_cell_is_rejected_even_with_valid_excerpt():
+    llm = MockLLM({
+        "answer": "Standalone total assets were 11,204.97 INR million.",
+        "excerpts": [{"text": "Total assets |  | 11,059.12 | 11,204.97", "pages": [131]}],
+    })
+    response = QAService(BM25Retriever.from_evidence(evidence()), llm=llm).ask(
+        "What were standalone total assets in 2026?"
+    )
+    assert response.answer == NOT_FOUND
+
+
 def test_empty_pages_are_rejected():
     llm = MockLLM({"answer": "Standalone total assets were 11,059.12 INR million.", "excerpts": [{"text": "Total assets |  | 11,059.12 | 11,204.97", "pages": []}]})
     response = QAService(BM25Retriever.from_evidence(evidence()), llm=llm).ask("What were standalone total assets in 2026?")

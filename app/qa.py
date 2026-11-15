@@ -92,17 +92,86 @@ def _compact_excerpt(chunk: Any, question: str, max_chars: int = 2200) -> list[s
     return selected
 
 
+def _deterministic_cells(chunk: Any, question: str) -> list[dict[str, Any]]:
+    """Expose only unambiguous row/column matches found in table metadata."""
+    metadata = getattr(chunk, "metadata", {}) or {}
+    cells = metadata.get("cells", [])
+    query = " ".join(tokenize(question))
+    years = set(re.findall(r"\b(?:19|20)\d{2}\b", query))
+    requested_scopes = _SCOPE_WORDS.intersection(_content_tokens(question))
+    chunk_scope = str(metadata.get("scope") or "").casefold()
+    if requested_scopes and chunk_scope and not requested_scopes.intersection({chunk_scope}):
+        return []
+    candidates: list[dict[str, Any]] = []
+    for cell in cells:
+        row = " ".join(tokenize(str(cell.get("row_label", ""))))
+        column = " ".join(tokenize(str(cell.get("column_label", ""))))
+        if not row or row == "total" or row not in query:
+            continue
+        column_matches = column in query or bool(years.intersection(set(re.findall(r"\b(?:19|20)\d{2}\b", column))))
+        if column_matches:
+            candidates.append(cell)
+    # Duplicate row/column matches are deliberately withheld rather than guessed.
+    unique: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+    for cell in candidates:
+        key = (str(cell.get("row_label")), str(cell.get("column_label")))
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(cell)
+    return unique if len(unique) == len(candidates) else []
+
+
+def _numeric_claim(value: str) -> str:
+    return re.sub(r"[^0-9.]", "", value)
+
+
+def _answer_matches_deterministic_cells(
+    answer: str, results: list[RetrievalResult], question: str
+) -> bool:
+    """Require every confidently resolved cell value to appear in the answer."""
+    resolved: list[dict[str, Any]] = []
+    for result in results:
+        resolved.extend(_deterministic_cells(result.chunk, question))
+    if not resolved:
+        return True
+    normalized_answer = _numeric_claim(answer)
+    values = {_numeric_claim(str(cell.get("value", ""))) for cell in resolved}
+    values.discard("")
+    return bool(values) and all(value in normalized_answer for value in values)
+
+
 def _evidence_payload(results: list[RetrievalResult], question: str) -> str:
     payload = []
     for result in results:
         chunk = result.chunk
         exact_lines = _compact_excerpt(chunk, question)
-        payload.append({
+        item = {
             "chunk_id": chunk.chunk_id,
             "text": chunk.text if chunk.kind != "financial_table" else chunk.text[:600],
             "exact_excerpt_lines": exact_lines,
             "pdf_pages": chunk.source_pages,
-        })
+        }
+        if chunk.kind == "financial_table":
+            item["table_metadata"] = {
+                key: chunk.metadata.get(key)
+                for key in ("section", "scope", "year_columns", "row_labels")
+                if chunk.metadata.get(key)
+            }
+            cells = _deterministic_cells(chunk, question)
+            if cells:
+                item["deterministic_cells"] = [
+                    {
+                        **cell,
+                        "table_id": cell.get("table_id") or chunk.source_table_id,
+                        "pdf_pages": cell.get("pdf_pages") or chunk.source_pages,
+                        "section": cell.get("section") or chunk.metadata.get("section"),
+                        "scope": cell.get("scope") or chunk.metadata.get("scope"),
+                    }
+                    for cell in cells
+                ]
+        payload.append(item)
     return json.dumps(payload, ensure_ascii=False)
 
 
@@ -195,5 +264,7 @@ class QAService:
         excerpts = parsed.get("excerpts")
         citations = validate_citations(answer, excerpts, results) if isinstance(excerpts, list) else None
         if citations is None:
+            return QAResponse(NOT_FOUND, [])
+        if not _answer_matches_deterministic_cells(answer, results, question):
             return QAResponse(NOT_FOUND, [])
         return QAResponse(answer, citations)

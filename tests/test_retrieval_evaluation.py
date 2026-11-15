@@ -131,7 +131,7 @@ def test_full_report_scope_specific_question_ranks_consolidated_balance_sheet_fi
     full_retriever: BM25Retriever,
 ) -> None:
     results = full_retriever.search(
-        "What was Total assets (1+2+3) in the consolidated balance sheet as at March 31, 2026?",
+        "What were consolidated total assets in 2026?",
         top_k=5,
     )
 

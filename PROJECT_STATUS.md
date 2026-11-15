@@ -2,9 +2,23 @@
 
 ## Milestone 7 - Operational hardening checkpoint
 
-Status: complete and verified; committed after operational-hardening review.
+Status: complete and verified locally; deterministic-selection changes remain uncommitted.
 
-Last Updated: 2026-11-15 01:33:26 IST (Asia/Kolkata)
+Last Updated: 2026-11-15 10:24:41 IST (Asia/Kolkata)
+
+### Latest verification
+
+- Prior verification: `.venv\\Scripts\\python.exe -m pytest -q`: **65 passed, 6 warnings** in 22.65 seconds.
+- Added scope-aware deterministic cell filtering and answer validation against resolved cell values.
+- Added regressions for cross-scope leakage and wrong-year answers with valid excerpts.
+- Added provider-neutral per-cell provenance metadata: table ID, PDF pages, section and scope.
+- Deterministic evidence payloads now retain page, row, column and value provenance for every selected cell.
+- Stitched multi-page tables now preserve the exact source page for each row and value cell, with table-range fallback for legacy evidence artifacts.
+- Added regression coverage for row-level page provenance across stitched table fragments.
+- Regenerated `data/full_evidence.json` with 335 pages, 245 tables and 6,083 cells carrying `pdf_pages`; 35 stitched tables with cell records have exact cell-page provenance.
+- Removed the temporary `chunks_debug.json` inspection file.
+- Latest elevated `.venv\\Scripts\\python.exe -m pytest -q`: **65 passed, 6 warnings** in 41.97 seconds.
+- Deterministic-selection changes remain uncommitted.
 
 ### Evidence scope decision
 
@@ -63,9 +77,9 @@ Last Updated: 2026-11-15 01:33:26 IST (Asia/Kolkata)
 
 ### Verified test results
 
-- `.venv\\Scripts\\python.exe -m pytest -q`: **60 passed, 6 warnings** in 40.04 seconds.
+- Previous baseline: `.venv\\Scripts\\python.exe -m pytest -q`: **60 passed, 6 warnings** in 40.04 seconds. Superseded by the latest verification above.
 - No paid API calls were made.
-- Milestone 7 is complete and committed after verification.
+- The latest deterministic-cell-selection changes are not committed; elevated verification is green.
 
 ### Completed
 
@@ -95,7 +109,7 @@ Last Updated: 2026-11-15 01:33:26 IST (Asia/Kolkata)
 
 Project: Provider-Agnostic Annual Report Knowledge Engine  
 Current milestone: Milestone 7 - Operational hardening checkpoint
-Last Updated: 2026-11-15 01:33:26 IST (Asia/Kolkata)
+Last Updated: 2026-11-15 10:24:41 IST (Asia/Kolkata)
 
 ## Completed
 

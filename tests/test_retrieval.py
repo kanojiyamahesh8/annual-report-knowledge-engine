@@ -29,6 +29,10 @@ def test_tables_are_atomic_chunks_with_source_pages() -> None:
     assert table_chunks[0].source_pages == [131]
     assert table_chunks[0].source_table_id == "table-0001"
     assert "11,059.12" in table_chunks[0].text
+    assert table_chunks[0].metadata["year_columns"] == {"2026": 1, "2025": 2}
+    assert table_chunks[0].metadata["cells"][0]["value"] == "11,059.12"
+    assert table_chunks[0].metadata["cells"][0]["table_id"] == "table-0001"
+    assert table_chunks[0].metadata["cells"][0]["pdf_pages"] == [131]
 
 
 def test_bm25_ranks_matching_financial_table() -> None:

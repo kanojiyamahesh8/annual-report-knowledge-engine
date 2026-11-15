@@ -70,6 +70,8 @@ Do not use outside knowledge or infer missing values. Preserve the financial yea
 standalone/consolidated scope, units, signs and exact figures. Return JSON only with
 this shape: {{"answer": "...", "excerpts": [{{"text": "exact supporting excerpt", "pages": [131]}}]}}.
 Every factual statement must be supported by an exact excerpt copied from evidence.
+When deterministic_cells are supplied, use those row/column/value mappings for the
+answer; if they are absent or ambiguous, rely only on the exact evidence lines.
 Use PDF page numbers from the evidence. For table citations, copy one complete line
 from exact_excerpt_lines exactly, including separators and blank table cells; do not
 rewrite, summarize, or remove separators. If evidence is insufficient or the question

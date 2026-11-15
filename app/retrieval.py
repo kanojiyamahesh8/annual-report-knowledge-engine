@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 import json
 from pathlib import Path
 import re
 from typing import Any, Iterable
 
 from rank_bm25 import BM25Okapi
+
+from app.extraction import _annotate_cells, _infer_scope, _infer_section, _table_cells, _year_columns
 
 
 TOKEN_PATTERN = re.compile(r"[A-Za-z0-9]+(?:[-'][A-Za-z0-9]+)?")
@@ -35,9 +37,8 @@ def _statement_scope_bonus(query: str, chunk: EvidenceChunk) -> float:
         return 0.0
     bonus = STATEMENT_SCOPE_BONUS
     chunk_text = chunk.text.casefold()
-    if "total assets" in chunk_text and "assets" in query_tokens:
-        bonus += EXACT_FINANCIAL_LABEL_BONUS
-    if "total assets (1+2+3)" in chunk_text and "3" in query_tokens:
+    normalized_query = " ".join(tokenize(query))
+    if "total assets" in normalized_query and "total assets" in chunk_text:
         bonus += EXACT_FINANCIAL_LABEL_BONUS
     return bonus
 
@@ -50,6 +51,7 @@ class EvidenceChunk:
     source_pages: list[int]
     source_table_id: str | None = None
     raw_excerpt: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -114,6 +116,27 @@ def build_chunks(evidence: dict[str, Any], max_chars: int = 1800) -> list[Eviden
         source_pages = [int(page) for page in table.get("source_pages", [])]
         context = " ".join(page_contexts.get(page, "") for page in source_pages).strip()
         table_text = _table_text(table, page_context=context)
+        semantic_headers = table.get("semantic_headers") or table.get("headers") or []
+        raw_excerpt = "\n".join(table.get("raw_excerpts", []))
+        table_metadata = {
+            "section": table.get("section") or _infer_section(context),
+            "scope": table.get("scope") or _infer_scope(context),
+            "year_columns": table.get("year_columns") or _year_columns(semantic_headers),
+            "row_labels": table.get("row_labels") or [row[0] for row in table.get("rows", []) if row],
+        }
+        cells = table.get("cells") or _table_cells(
+            semantic_headers,
+            table.get("rows") or [],
+            semantic_headers,
+            raw_excerpt,
+        )
+        table_metadata["cells"] = _annotate_cells(
+            cells,
+            table_id,
+            source_pages,
+            table_metadata["section"],
+            table_metadata["scope"],
+        )
         chunks.append(
             EvidenceChunk(
                 chunk_id=f"table-{table_id}",
@@ -121,7 +144,8 @@ def build_chunks(evidence: dict[str, Any], max_chars: int = 1800) -> list[Eviden
                 text=table_text,
                 source_pages=source_pages,
                 source_table_id=table_id,
-                raw_excerpt="\n".join(table.get("raw_excerpts", [])),
+                raw_excerpt=raw_excerpt,
+                metadata=table_metadata,
             )
         )
     return chunks

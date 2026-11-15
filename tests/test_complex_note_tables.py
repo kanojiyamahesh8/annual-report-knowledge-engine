@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from app.extraction import extract_document
+from app.extraction import extract_document, resolve_table_cell
 
 
 PDF_PATH = Path("documents/Centum_Annual_Report.pdf")
@@ -45,6 +45,13 @@ def test_ageing_table_preserves_year_values_and_continuity() -> None:
     receivables = next(row for row in table.rows if "considered good" in row[0])
     assert receivables[1:3] == ["13.65", "1,981.72"]
     assert receivables[-1] == "2,971.87"
+    assert table.year_columns == {}
+    assert "Undisputed trade receivables - considered good" in table.row_labels
+    resolved = resolve_table_cell(table, "Undisputed trade receivables - considered good", "Total")
+    assert resolved is not None
+    assert resolved["value"] == "2,971.87"
+    assert resolved["pdf_pages"] == [161]
+    assert resolve_table_cell(table, "Undisputed trade receivables - considered good", "missing") is None
 
 
 def test_promoter_and_payables_tables_stitch_and_preserve_relationships() -> None:
@@ -59,3 +66,13 @@ def test_promoter_and_payables_tables_stitch_and_preserve_relationships() -> Non
     assert total[-1] == "2,549.37"
     assert payables.headers[1].endswith("/ Unbilled dues")
     assert payables.source_pages == [173, 174]
+
+
+def test_ppe_metadata_resolves_net_block_total_by_exact_column() -> None:
+    document = extract_document(PDF_PATH, [155])
+    table = document.tables[0]
+
+    assert table.scope == "standalone"
+    resolved = resolve_table_cell(table, "Net block", "Total")
+    assert resolved is not None
+    assert resolved["value"] == "1,337.25"
