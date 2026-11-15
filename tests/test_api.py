@@ -6,7 +6,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from app.main import JsonFormatter, app, get_qa_service, load_configured_evidence
+from app.main import JsonFormatter, _provider_diagnostic, app, get_qa_service, load_configured_evidence
 from app.qa import LLMInvocationError, NOT_FOUND
 
 
@@ -120,6 +120,22 @@ def test_ask_endpoint_hides_provider_failures(monkeypatch):
     assert response.status_code == 502
     assert response.json() == {"detail": "LLM provider request failed"}
     assert "secret provider detail" not in response.text
+
+
+def test_provider_diagnostic_logs_type_and_status_without_message():
+    class FakeProviderError(RuntimeError):
+        status_code = 401
+
+    try:
+        try:
+            raise FakeProviderError("api-key-secret-must-not-be-logged")
+        except FakeProviderError as cause:
+            raise LLMInvocationError("wrapped provider failure") from cause
+    except LLMInvocationError as error:
+        diagnostic = _provider_diagnostic(error)
+
+    assert diagnostic == {"provider_error_type": "FakeProviderError", "provider_status_code": 401}
+    assert "secret" not in json.dumps(diagnostic)
 
 
 def test_real_service_provider_invocation_failure_is_502(monkeypatch):

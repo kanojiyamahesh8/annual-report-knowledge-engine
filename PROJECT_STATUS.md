@@ -2,9 +2,9 @@
 
 ## Milestone 7 - Operational hardening checkpoint
 
-Status: complete and verified locally; deterministic-selection changes remain uncommitted.
+Status: complete and verified; final Milestone 7 changes ready for submission.
 
-Last Updated: 2026-11-15 10:24:41 IST (Asia/Kolkata)
+Last Updated: 2026-11-15 11:24:41 IST (Asia/Kolkata)
 
 ### Latest verification
 
@@ -18,7 +18,12 @@ Last Updated: 2026-11-15 10:24:41 IST (Asia/Kolkata)
 - Regenerated `data/full_evidence.json` with 335 pages, 245 tables and 6,083 cells carrying `pdf_pages`; 35 stitched tables with cell records have exact cell-page provenance.
 - Removed the temporary `chunks_debug.json` inspection file.
 - Latest elevated `.venv\\Scripts\\python.exe -m pytest -q`: **65 passed, 6 warnings** in 41.97 seconds.
-- Deterministic-selection changes remain uncommitted.
+- Added temporary safe provider diagnostics that log only the underlying error type and numeric status code, never exception messages, prompts or credentials.
+- Elevated `.venv\\Scripts\\python.exe -m pytest -q`: **66 passed, 6 warnings** in 45.99 seconds.
+- Added opt-in `scripts/provider_smoke_test.py` for one-request live validation of OpenAI, Gemini, Anthropic and Groq using configured credentials; no live smoke calls were made automatically.
+- Smoke-test help and syntax validation passed; the complete elevated pytest suite passed with **66 tests** in 16.32 seconds.
+- Restored `.env.example` to the standard `gpt-4o-mini` OpenAI model example.
+- Final elevated `.venv\\Scripts\\python.exe -m pytest -q`: **66 passed, 6 warnings** in 13.92 seconds.
 
 ### Evidence scope decision
 
@@ -109,7 +114,7 @@ Last Updated: 2026-11-15 10:24:41 IST (Asia/Kolkata)
 
 Project: Provider-Agnostic Annual Report Knowledge Engine  
 Current milestone: Milestone 7 - Operational hardening checkpoint
-Last Updated: 2026-11-15 10:24:41 IST (Asia/Kolkata)
+Last Updated: 2026-11-15 11:24:41 IST (Asia/Kolkata)
 
 ## Completed
 

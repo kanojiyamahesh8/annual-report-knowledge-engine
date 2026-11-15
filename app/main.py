@@ -26,7 +26,17 @@ from app.retrieval import BM25Retriever, load_evidence
 class JsonFormatter(logging.Formatter):
     """Compact JSON logs with only operational, non-sensitive fields."""
 
-    _FIELDS = ("request_id", "method", "path", "status_code", "latency_ms", "result", "failure")
+    _FIELDS = (
+        "request_id",
+        "method",
+        "path",
+        "status_code",
+        "latency_ms",
+        "result",
+        "failure",
+        "provider_error_type",
+        "provider_status_code",
+    )
 
     def format(self, record: logging.LogRecord) -> str:
         payload = {
@@ -166,6 +176,25 @@ def _request_error(status_code: int, detail: str, request_id: str) -> HTTPExcept
     return HTTPException(status_code=status_code, detail=detail, headers={"X-Request-ID": request_id})
 
 
+def _provider_diagnostic(exc: BaseException) -> dict[str, str | int]:
+    """Return safe provider diagnostics without serializing exception messages."""
+    current: BaseException | None = exc
+    seen: set[int] = set()
+    deepest = exc
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        deepest = current
+        current = current.__cause__ or current.__context__
+    status_code = getattr(deepest, "status_code", None)
+    if status_code is None:
+        response = getattr(deepest, "response", None)
+        status_code = getattr(response, "status_code", None)
+    diagnostic: dict[str, str | int] = {"provider_error_type": type(deepest).__name__}
+    if isinstance(status_code, int):
+        diagnostic["provider_status_code"] = status_code
+    return diagnostic
+
+
 @app.get("/", response_class=HTMLResponse)
 def homepage(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(request=request, name="index.html", context={})
@@ -219,7 +248,15 @@ def ask(request: AskRequest, response: Response, http_request: Request) -> AskRe
         logger.info("qa_request_completed", extra={"request_id": request_id, "result": "answered" if payload["answer"] != "Information not found in the provided document" else "not_found", "latency_ms": round((perf_counter() - started) * 1000, 2)})
         return payload
     except LLMInvocationError as exc:
-        logger.error("qa_request_failed", extra={"request_id": request_id, "failure": "provider_invocation", "latency_ms": round((perf_counter() - started) * 1000, 2)})
+        logger.error(
+            "qa_request_failed",
+            extra={
+                "request_id": request_id,
+                "failure": "provider_invocation",
+                "latency_ms": round((perf_counter() - started) * 1000, 2),
+                **_provider_diagnostic(exc),
+            },
+        )
         raise _request_error(502, "LLM provider request failed", request_id) from exc
     except Exception as exc:
         logger.exception("qa_request_internal_error", extra={"request_id": request_id, "latency_ms": round((perf_counter() - started) * 1000, 2)})
